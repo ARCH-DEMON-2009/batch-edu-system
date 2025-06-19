@@ -9,13 +9,269 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      batches: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      chapters: {
+        Row: {
+          created_at: string
+          id: string
+          order_index: number
+          subject_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_index?: number
+          subject_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_index?: number
+          subject_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chapters_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_backups: {
+        Row: {
+          backup_data: Json
+          backup_date: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          backup_data: Json
+          backup_date?: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          backup_data?: Json
+          backup_date?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      lectures: {
+        Row: {
+          chapter_id: string
+          created_at: string
+          dpp_url: string | null
+          id: string
+          notes_url: string | null
+          title: string
+          updated_at: string
+          uploaded_by: string
+          video_type: string
+          video_url: string
+        }
+        Insert: {
+          chapter_id: string
+          created_at?: string
+          dpp_url?: string | null
+          id?: string
+          notes_url?: string | null
+          title: string
+          updated_at?: string
+          uploaded_by: string
+          video_type: string
+          video_url: string
+        }
+        Update: {
+          chapter_id?: string
+          created_at?: string
+          dpp_url?: string | null
+          id?: string
+          notes_url?: string | null
+          title?: string
+          updated_at?: string
+          uploaded_by?: string
+          video_type?: string
+          video_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lectures_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_classes: {
+        Row: {
+          batch_id: string
+          chapter_id: string
+          created_at: string
+          id: string
+          live_url: string
+          scheduled_at: string
+          status: string
+          subject_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          chapter_id: string
+          created_at?: string
+          id?: string
+          live_url: string
+          scheduled_at: string
+          status?: string
+          subject_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          chapter_id?: string
+          created_at?: string
+          id?: string
+          live_url?: string
+          scheduled_at?: string
+          status?: string
+          subject_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_classes_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_classes_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_classes_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subjects: {
+        Row: {
+          batch_id: string
+          color: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subjects_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_profiles: {
+        Row: {
+          assigned_batches: string[] | null
+          created_at: string
+          email: string
+          id: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_batches?: string[] | null
+          created_at?: string
+          email: string
+          id?: string
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_batches?: string[] | null
+          created_at?: string
+          email?: string
+          id?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_daily_backup: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      restore_from_backup: {
+        Args: { restore_date: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
