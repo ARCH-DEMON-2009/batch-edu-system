@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useData, Batch, Subject } from '@/contexts/DataContext';
+import { useData, Batch, Subject, Chapter } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -19,10 +19,10 @@ interface ChapterManagementProps {
 }
 
 const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) => {
-  const [isCreateChapterOpen, setIsCreateChapterOpen] = useState(false);
-  const [isCreateLectureOpen, setIsCreateLectureOpen] = useState(false);
-  const [selectedChapter, setSelectedChapter] = useState<string>('');
-  const [newChapter, setNewChapter] = useState({ title: '' });
+  const [isCreateChapterDialogOpen, setIsCreateChapterDialogOpen] = useState(false);
+  const [isCreateLectureDialogOpen, setIsCreateLectureDialogOpen] = useState(false);
+  const [selectedChapter, setSelectedChapter] = useState<string | null>(null);
+  const [newChapter, setNewChapter] = useState({ title: '', order: 1 });
   const [newLecture, setNewLecture] = useState({
     title: '',
     videoUrl: '',
@@ -30,7 +30,7 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
     dppUrl: '',
     notesUrl: ''
   });
-  
+
   const { addChapter, addLecture } = useData();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -40,8 +40,8 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
 
     addChapter(batch.id, subject.id, {
       title: newChapter.title,
-      lectures: [],
-      order: subject.chapters.length + 1
+      order: newChapter.order,
+      lectures: []
     });
 
     toast({
@@ -49,8 +49,8 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
       description: `${newChapter.title} has been added to ${subject.name}.`,
     });
 
-    setNewChapter({ title: '' });
-    setIsCreateChapterOpen(false);
+    setNewChapter({ title: '', order: 1 });
+    setIsCreateChapterDialogOpen(false);
   };
 
   const handleCreateLecture = () => {
@@ -68,7 +68,7 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
 
     toast({
       title: "Lecture Added",
-      description: `${newLecture.title} has been uploaded successfully.`,
+      description: `${newLecture.title} has been added successfully.`,
     });
 
     setNewLecture({
@@ -78,15 +78,16 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
       dppUrl: '',
       notesUrl: ''
     });
-    setSelectedChapter('');
-    setIsCreateLectureOpen(false);
+    setSelectedChapter(null);
+    setIsCreateLectureDialogOpen(false);
   };
 
-  const detectVideoType = (url: string) => {
-    if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      return 'youtube';
+  const getVideoThumbnail = (url: string, type: 'youtube' | 'direct') => {
+    if (type === 'youtube') {
+      const videoId = url.match(/(?:youtu\.be\/|youtube\.com\/watch\?v=)([^&\n?#]+)/)?.[1];
+      return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : null;
     }
-    return 'direct';
+    return null;
   };
 
   return (
@@ -104,24 +105,68 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
         </div>
 
         <div className="flex gap-2">
-          <Dialog open={isCreateLectureOpen} onOpenChange={setIsCreateLectureOpen}>
+          <Dialog open={isCreateChapterDialogOpen} onOpenChange={setIsCreateChapterDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Chapter
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Chapter</DialogTitle>
+                <DialogDescription>
+                  Add a new chapter to {subject.name}.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="chapter-title">Chapter Title</Label>
+                  <Input
+                    id="chapter-title"
+                    placeholder="e.g., Laws of Motion"
+                    value={newChapter.title}
+                    onChange={(e) => setNewChapter({ ...newChapter, title: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="chapter-order">Order</Label>
+                  <Input
+                    id="chapter-order"
+                    type="number"
+                    min="1"
+                    value={newChapter.order}
+                    onChange={(e) => setNewChapter({ ...newChapter, order: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsCreateChapterDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateChapter}>Add Chapter</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isCreateLectureDialogOpen} onOpenChange={setIsCreateLectureDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Lecture
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Upload New Lecture</DialogTitle>
+                <DialogTitle>Add New Lecture</DialogTitle>
                 <DialogDescription>
-                  Add a new lecture to an existing chapter in {subject.name}.
+                  Add a new lecture to a chapter in {subject.name}.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="chapter-select">Select Chapter</Label>
-                  <Select value={selectedChapter} onValueChange={setSelectedChapter}>
+                  <Label htmlFor="lecture-chapter">Select Chapter</Label>
+                  <Select value={selectedChapter || ''} onValueChange={setSelectedChapter}>
                     <SelectTrigger>
                       <SelectValue placeholder="Choose a chapter" />
                     </SelectTrigger>
@@ -134,86 +179,65 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div>
                   <Label htmlFor="lecture-title">Lecture Title</Label>
                   <Input
                     id="lecture-title"
-                    placeholder="e.g., Introduction to Motion"
+                    placeholder="e.g., Introduction to Newton's Laws"
                     value={newLecture.title}
                     onChange={(e) => setNewLecture({ ...newLecture, title: e.target.value })}
                   />
                 </div>
+
+                <div>
+                  <Label htmlFor="video-type">Video Type</Label>
+                  <Select value={newLecture.videoType} onValueChange={(value: 'youtube' | 'direct') => setNewLecture({ ...newLecture, videoType: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="youtube">YouTube</SelectItem>
+                      <SelectItem value="direct">Direct Link</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div>
                   <Label htmlFor="video-url">Video URL</Label>
                   <Input
                     id="video-url"
-                    placeholder="YouTube URL or direct video link"
+                    placeholder={newLecture.videoType === 'youtube' ? 'https://youtu.be/...' : 'https://example.com/video.mp4'}
                     value={newLecture.videoUrl}
-                    onChange={(e) => setNewLecture({ 
-                      ...newLecture, 
-                      videoUrl: e.target.value,
-                      videoType: detectVideoType(e.target.value) as 'youtube' | 'direct'
-                    })}
+                    onChange={(e) => setNewLecture({ ...newLecture, videoUrl: e.target.value })}
                   />
                 </div>
+
                 <div>
-                  <Label htmlFor="notes-url">Notes PDF URL (Optional)</Label>
-                  <Input
-                    id="notes-url"
-                    placeholder="Direct link to PDF notes"
-                    value={newLecture.notesUrl}
-                    onChange={(e) => setNewLecture({ ...newLecture, notesUrl: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="dpp-url">DPP PDF URL (Optional)</Label>
+                  <Label htmlFor="dpp-url">DPP URL (Optional)</Label>
                   <Input
                     id="dpp-url"
-                    placeholder="Direct link to DPP PDF"
+                    placeholder="https://static.pw.live/...pdf"
                     value={newLecture.dppUrl}
                     onChange={(e) => setNewLecture({ ...newLecture, dppUrl: e.target.value })}
                   />
                 </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateLectureOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleCreateLecture}>Upload Lecture</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
 
-          <Dialog open={isCreateChapterOpen} onOpenChange={setIsCreateChapterOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Chapter
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Chapter</DialogTitle>
-                <DialogDescription>
-                  Add a new chapter to {subject.name}.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
                 <div>
-                  <Label htmlFor="chapter-title">Chapter Title</Label>
+                  <Label htmlFor="notes-url">Notes URL (Optional)</Label>
                   <Input
-                    id="chapter-title"
-                    placeholder="e.g., Mechanics, Thermodynamics"
-                    value={newChapter.title}
-                    onChange={(e) => setNewChapter({ ...newChapter, title: e.target.value })}
+                    id="notes-url"
+                    placeholder="https://d2bps9p1kiy4ka.cloudfront.net/...pdf"
+                    value={newLecture.notesUrl}
+                    onChange={(e) => setNewLecture({ ...newLecture, notesUrl: e.target.value })}
                   />
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateChapterOpen(false)}>
+                <Button variant="outline" onClick={() => setIsCreateLectureDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreateChapter}>Create Chapter</Button>
+                <Button onClick={handleCreateLecture}>Add Lecture</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -221,60 +245,87 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
       </div>
 
       <div className="space-y-6">
-        {subject.chapters.map((chapter) => (
-          <Card key={chapter.id}>
-            <CardHeader className={`${subject.color} text-white rounded-t-lg`}>
-              <CardTitle className="flex items-center justify-between">
-                <span>{chapter.title}</span>
-                <span className="text-sm opacity-90">
-                  {chapter.lectures.length} lectures
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              {chapter.lectures.length > 0 ? (
-                <div className="space-y-3">
-                  {chapter.lectures.map((lecture) => (
-                    <div key={lecture.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Play className="h-5 w-5 text-blue-600" />
-                        <div>
-                          <h4 className="font-medium">{lecture.title}</h4>
-                          <p className="text-sm text-gray-500">
-                            Uploaded by {lecture.uploadedBy} • {lecture.videoType === 'youtube' ? 'YouTube' : 'Direct'}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {lecture.notesUrl && (
-                          <FileText className="h-4 w-4 text-green-600" title="Notes available" />
-                        )}
-                        {lecture.dppUrl && (
-                          <Download className="h-4 w-4 text-blue-600" title="DPP available" />
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <Play className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>No lectures in this chapter yet.</p>
-                  <p className="text-sm">Click "Add Lecture" to upload content.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-
-        {subject.chapters.length === 0 && (
-          <div className="text-center py-12">
-            <Play className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">No Chapters Added</h3>
-            <p className="text-gray-500">Create chapters to organize your lectures.</p>
-          </div>
-        )}
+        {subject.chapters
+          .sort((a, b) => a.order - b.order)
+          .map((chapter) => (
+            <Card key={chapter.id}>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Chapter {chapter.order}: {chapter.title}</span>
+                  <span className="text-sm font-normal text-gray-500">
+                    {chapter.lectures.length} lectures
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {chapter.lectures.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {chapter.lectures.map((lecture) => {
+                      const thumbnail = getVideoThumbnail(lecture.videoUrl, lecture.videoType);
+                      
+                      return (
+                        <Card key={lecture.id} className="overflow-hidden">
+                          {thumbnail && (
+                            <div className="aspect-video bg-gray-100">
+                              <img 
+                                src={thumbnail} 
+                                alt={lecture.title}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                }}
+                              />
+                            </div>
+                          )}
+                          <CardContent className="p-4">
+                            <h4 className="font-medium mb-2 line-clamp-2">{lecture.title}</h4>
+                            <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
+                              <Play className="h-3 w-3" />
+                              <span>{lecture.videoType === 'youtube' ? 'YouTube' : 'Direct'}</span>
+                            </div>
+                            
+                            <div className="flex gap-2">
+                              <Button size="sm" className="flex-1">
+                                <Play className="h-3 w-3 mr-1" />
+                                Watch
+                              </Button>
+                              
+                              {lecture.dppUrl && (
+                                <Button size="sm" variant="outline">
+                                  <FileText className="h-3 w-3" />
+                                </Button>
+                              )}
+                              
+                              {lecture.notesUrl && (
+                                <Button size="sm" variant="outline">
+                                  <Download className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Play className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500">No lectures added yet</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
       </div>
+
+      {subject.chapters.length === 0 && (
+        <div className="text-center py-12">
+          <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-gray-600 mb-2">No Chapters Added</h3>
+          <p className="text-gray-500">Add chapters to organize your lectures.</p>
+        </div>
+      )}
     </div>
   );
 };
