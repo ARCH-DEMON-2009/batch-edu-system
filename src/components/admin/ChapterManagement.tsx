@@ -39,8 +39,7 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
 
     addChapter(batch.id, subject.id, {
       title: newChapter.title,
-      order: newChapter.order,
-      lectures: []
+      order: newChapter.order
     });
 
     toast({
