@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Calendar, Download, Upload, Database, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -47,7 +46,7 @@ const BackupManagement = () => {
     }
   };
 
-  const today = new Date().to2/String();
+  const today = new Date().toISOString().split('T')[0];
 
   return (
     <div className="space-y-6">

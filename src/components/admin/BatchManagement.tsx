@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Plus, Edit, Trash2, BookOpen, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -30,9 +29,7 @@ const BatchManagement = () => {
 
     addBatch({
       name: newBatch.name,
-      description: newBatch.description,
-      subjects: [],
-      assignedUploaders: []
+      description: newBatch.description
     });
 
     toast({

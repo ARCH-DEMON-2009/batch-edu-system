@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { ArrowLeft, Plus, BookOpen, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -41,8 +40,7 @@ const SubjectManagement = ({ batch, onBack }: SubjectManagementProps) => {
 
     addSubject(batch.id, {
       name: newSubject.name,
-      color: newSubject.color,
-      chapters: []
+      color: newSubject.color
     });
 
     toast({
