@@ -59,7 +59,12 @@ const AdminDashboard = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
               <BookOpen className="h-8 w-8 text-blue-600" />
-              <h1 className="text-xl font-bold text-gray-900">Admin Dashboard</h1>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">
+                  {user?.role === 'uploader' ? 'Content Dashboard' : 'Admin Dashboard'}
+                </h1>
+                <p className="text-sm text-gray-500 capitalize">{user?.role?.replace('_', ' ')} Panel</p>
+              </div>
             </div>
             
             <div className="flex items-center space-x-4">
@@ -80,7 +85,9 @@ const AdminDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Batches</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                {user?.role === 'uploader' ? 'My Batches' : 'Total Batches'}
+              </CardTitle>
               <BookOpen className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -131,11 +138,15 @@ const AdminDashboard = () => {
 
         {/* Management Tabs */}
         <Tabs defaultValue="batches" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
-            <TabsTrigger value="batches">Batches</TabsTrigger>
+          <TabsList className={`grid w-full ${user?.role === 'uploader' ? 'grid-cols-2' : user?.role === 'admin' ? 'grid-cols-3' : 'grid-cols-4'}`}>
+            <TabsTrigger value="batches">
+              {user?.role === 'uploader' ? 'My Batches' : 'Batches'}
+            </TabsTrigger>
             <TabsTrigger value="live-classes">Live Classes</TabsTrigger>
-            <TabsTrigger value="backup">Backup</TabsTrigger>
-            {(user?.role === 'super_admin') && (
+            {user?.role !== 'uploader' && (
+              <TabsTrigger value="backup">Backup</TabsTrigger>
+            )}
+            {user?.role === 'super_admin' && (
               <TabsTrigger value="users">Users</TabsTrigger>
             )}
           </TabsList>
@@ -148,11 +159,13 @@ const AdminDashboard = () => {
             <LiveClassManagement />
           </TabsContent>
 
-          <TabsContent value="backup" className="space-y-6">
-            <BackupManagement />
-          </TabsContent>
+          {user?.role !== 'uploader' && (
+            <TabsContent value="backup" className="space-y-6">
+              <BackupManagement />
+            </TabsContent>
+          )}
 
-          {(user?.role === 'super_admin') && (
+          {user?.role === 'super_admin' && (
             <TabsContent value="users" className="space-y-6">
               <UserManagement />
             </TabsContent>

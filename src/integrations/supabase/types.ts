@@ -11,6 +11,7 @@ export type Database = {
     Tables: {
       batches: {
         Row: {
+          assigned_uploaders: string[] | null
           created_at: string
           description: string | null
           id: string
@@ -18,6 +19,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_uploaders?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
@@ -25,6 +27,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_uploaders?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
@@ -240,6 +243,7 @@ export type Database = {
           id: string
           role: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           assigned_batches?: string[] | null
@@ -248,6 +252,7 @@ export type Database = {
           id?: string
           role: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           assigned_batches?: string[] | null
@@ -256,6 +261,7 @@ export type Database = {
           id?: string
           role?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }

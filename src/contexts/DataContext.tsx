@@ -1,7 +1,7 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface Lecture {
   id: string;
@@ -79,13 +79,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [liveClasses, setLiveClasses] = useState<LiveClass[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const loadBatches = async () => {
     try {
       // Load batches with all related data
-      const { data: batchesData, error: batchesError } = await supabase
-        .from('batches')
-        .select('*')
+      let batchesQuery = supabase.from('batches').select('*');
+      
+      // Filter batches for uploaders based on their assigned batches
+      if (user?.role === 'uploader' && user.assignedBatches?.length > 0) {
+        batchesQuery = batchesQuery.in('id', user.assignedBatches);
+      }
+      
+      const { data: batchesData, error: batchesError } = await batchesQuery
         .order('created_at', { ascending: false });
 
       if (batchesError) throw batchesError;
@@ -144,7 +150,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 id: subject.id,
                 name: subject.name,
                 color: subject.color,
-                chapters: chaptersWithLectures
+                chapters: chaptersWithChapters
               };
             })
           );
@@ -154,7 +160,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             name: batch.name,
             description: batch.description || '',
             subjects: subjectsWithChapters,
-            assignedUploaders: [] // Will be loaded from user_profiles later
+            assignedUploaders: batch.assigned_uploaders || []
           };
         })
       );
@@ -172,9 +178,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const loadLiveClasses = async () => {
     try {
-      const { data, error } = await supabase
-        .from('live_classes')
-        .select('*')
+      let liveClassesQuery = supabase.from('live_classes').select('*');
+      
+      // Filter live classes for uploaders based on their assigned batches
+      if (user?.role === 'uploader' && user.assignedBatches?.length > 0) {
+        liveClassesQuery = liveClassesQuery.in('batch_id', user.assignedBatches);
+      }
+      
+      const { data, error } = await liveClassesQuery
         .order('scheduled_at', { ascending: false });
 
       if (error) throw error;
@@ -200,14 +211,22 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const refreshData = async () => {
+    if (!user) return;
+    
     setLoading(true);
     await Promise.all([loadBatches(), loadLiveClasses()]);
     setLoading(false);
   };
 
   useEffect(() => {
-    refreshData();
-  }, []);
+    if (user) {
+      refreshData();
+    } else {
+      setBatches([]);
+      setLiveClasses([]);
+      setLoading(false);
+    }
+  }, [user]);
 
   const addBatch = async (batch: Omit<Batch, 'id' | 'subjects' | 'assignedUploaders'>) => {
     try {
