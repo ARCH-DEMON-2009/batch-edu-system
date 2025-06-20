@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Plus, Users, Edit, Trash2, Shield, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -49,7 +48,17 @@ const UserManagement = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setUsers(data || []);
+      
+      // Transform the data to match our UserProfile interface
+      const transformedUsers = (data || []).map(user => ({
+        id: user.id,
+        email: user.email,
+        role: user.role as 'super_admin' | 'admin' | 'uploader',
+        assigned_batches: user.assigned_batches || [],
+        user_id: user.user_id
+      }));
+      
+      setUsers(transformedUsers);
     } catch (error) {
       console.error('Error loading users:', error);
       toast({

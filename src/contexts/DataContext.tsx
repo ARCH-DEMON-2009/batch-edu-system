@@ -150,7 +150,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 id: subject.id,
                 name: subject.name,
                 color: subject.color,
-                chapters: chaptersWithChapters
+                chapters: chaptersWithLectures
               };
             })
           );
