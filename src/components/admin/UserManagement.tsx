@@ -101,17 +101,19 @@ const UserManagement = () => {
       if (authError) throw authError;
 
       if (authData.user) {
-        // Create user profile
-        const { error: profileError } = await supabase
+        // Wait a moment for the trigger to create the profile
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Update the automatically created profile with the correct role and assignments
+        const { error: updateError } = await supabase
           .from('user_profiles')
-          .upsert({
-            user_id: authData.user.id,
-            email: newUser.email,
+          .update({
             role: newUser.role,
             assigned_batches: newUser.role === 'uploader' ? newUser.assignedBatches : []
-          });
+          })
+          .eq('user_id', authData.user.id);
 
-        if (profileError) throw profileError;
+        if (updateError) throw updateError;
 
         toast({
           title: "User Created",
