@@ -89,31 +89,76 @@ const UserManagement = () => {
 
     setLoading(true);
     try {
+      // Check if user with this email already exists
+      const { data: existingUser } = await supabase
+        .from('user_profiles')
+        .select('email')
+        .eq('email', newUser.email)
+        .single();
+
+      if (existingUser) {
+        toast({
+          title: "User Already Exists",
+          description: "A user with this email already exists.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       // Create user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: newUser.email,
         password: newUser.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/admin/login`
+          emailRedirectTo: `${window.location.origin}/admin/dashboard`
         }
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        console.error('Auth error:', authError);
+        throw new Error(authError.message);
+      }
 
       if (authData.user) {
-        // Wait a moment for the trigger to create the profile
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Wait for the trigger to create the profile, then update it
+        let retries = 0;
+        const maxRetries = 10;
+        let profileCreated = false;
 
-        // Update the automatically created profile with the correct role and assignments
-        const { error: updateError } = await supabase
-          .from('user_profiles')
-          .update({
-            role: newUser.role,
-            assigned_batches: newUser.role === 'uploader' ? newUser.assignedBatches : []
-          })
-          .eq('user_id', authData.user.id);
+        while (retries < maxRetries && !profileCreated) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .eq('user_id', authData.user.id)
+            .single();
 
-        if (updateError) throw updateError;
+          if (profile) {
+            profileCreated = true;
+            
+            // Update the automatically created profile with the correct role and assignments
+            const { error: updateError } = await supabase
+              .from('user_profiles')
+              .update({
+                role: newUser.role,
+                assigned_batches: newUser.role === 'uploader' ? newUser.assignedBatches : []
+              })
+              .eq('user_id', authData.user.id);
+
+            if (updateError) {
+              console.error('Profile update error:', updateError);
+              throw new Error('Failed to update user profile');
+            }
+          }
+          
+          retries++;
+        }
+
+        if (!profileCreated) {
+          throw new Error('Profile creation timeout');
+        }
 
         toast({
           title: "User Created",
