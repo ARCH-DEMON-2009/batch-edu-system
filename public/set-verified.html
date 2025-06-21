@@ -1,0 +1,81 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Verified</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        .success-icon {
+            font-size: 4rem;
+            color: #10b981;
+            margin-bottom: 1rem;
+        }
+        h1 {
+            color: #1f2937;
+            margin-bottom: 1rem;
+        }
+        p {
+            color: #6b7280;
+            margin-bottom: 2rem;
+        }
+        .countdown {
+            font-size: 2rem;
+            color: #3b82f6;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">✅</div>
+        <h1>Access Verified!</h1>
+        <p>Your premium access has been activated. You will be redirected shortly...</p>
+        <div class="countdown" id="countdown">5</div>
+    </div>
+
+    <script>
+        // Get validity duration from URL params or use default
+        const urlParams = new URLSearchParams(window.location.search);
+        const duration = urlParams.get('duration') || '3600'; // default 1 hour
+        
+        // Set verified cookie with custom duration
+        document.cookie = `verified=true; max-age=${duration}; path=/`;
+        
+        // Countdown and redirect
+        let count = 5;
+        const countdownEl = document.getElementById('countdown');
+        
+        const countdown = setInterval(() => {
+            count--;
+            countdownEl.textContent = count;
+            
+            if (count <= 0) {
+                clearInterval(countdown);
+                window.location.href = '/';
+            }
+        }, 1000);
+        
+        console.log('Access verified with duration:', duration, 'seconds');
+    </script>
+</body>
+</html>

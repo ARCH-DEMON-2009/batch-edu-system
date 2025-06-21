@@ -40,14 +40,44 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const loadUserProfile = async (supabaseUser: SupabaseUser) => {
     try {
-      const { data: profile, error } = await supabase
+      console.log('Loading profile for user:', supabaseUser.email);
+      
+      // First try to get profile by user_id
+      let { data: profile, error } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('user_id', supabaseUser.id)
         .single();
 
-      if (error) {
+      // If no profile found by user_id, try by email
+      if (error && error.code === 'PGRST116') {
+        console.log('No profile found by user_id, trying by email...');
+        const { data: emailProfile, error: emailError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('email', supabaseUser.email)
+          .single();
+
+        if (!emailError && emailProfile) {
+          // Update the profile with the user_id
+          const { error: updateError } = await supabase
+            .from('user_profiles')
+            .update({ user_id: supabaseUser.id })
+            .eq('id', emailProfile.id);
+
+          if (!updateError) {
+            profile = { ...emailProfile, user_id: supabaseUser.id };
+          }
+        }
+      }
+
+      if (error && error.code !== 'PGRST116') {
         console.error('Error loading user profile:', error);
+        return null;
+      }
+
+      if (!profile) {
+        console.log('No profile found, this might be a new user');
         return null;
       }
 
@@ -67,6 +97,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         
         if (session?.user) {
@@ -82,6 +113,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     // Check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.email);
       setSession(session);
       
       if (session?.user) {
@@ -97,6 +129,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
+      console.log('Attempting login for:', email);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -107,16 +141,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return false;
       }
 
-      if (data.user) {
-        const userProfile = await loadUserProfile(data.user);
-        if (userProfile) {
-          setUser(userProfile);
-          setSession(data.session);
-          return true;
-        }
-      }
-      
-      return false;
+      console.log('Login successful for:', email);
+      return true;
     } catch (error) {
       console.error('Login error:', error);
       return false;

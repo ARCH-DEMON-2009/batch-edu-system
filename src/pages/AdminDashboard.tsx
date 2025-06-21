@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { 
   Users, 
@@ -8,7 +7,8 @@ import {
   Calendar,
   Database,
   LogOut,
-  Settings
+  Settings,
+  DollarSign
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +19,7 @@ import BatchManagement from '@/components/admin/BatchManagement';
 import UserManagement from '@/components/admin/UserManagement';
 import LiveClassManagement from '@/components/admin/LiveClassManagement';
 import BackupManagement from '@/components/admin/BackupManagement';
+import MonetizationSettings from '@/components/admin/MonetizationSettings';
 
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
@@ -81,7 +82,6 @@ const AdminDashboard = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -138,7 +138,7 @@ const AdminDashboard = () => {
 
         {/* Management Tabs */}
         <Tabs defaultValue="batches" className="space-y-6">
-          <TabsList className={`grid w-full ${user?.role === 'uploader' ? 'grid-cols-2' : user?.role === 'admin' ? 'grid-cols-3' : 'grid-cols-4'}`}>
+          <TabsList className={`grid w-full ${user?.role === 'uploader' ? 'grid-cols-2' : user?.role === 'admin' ? 'grid-cols-3' : 'grid-cols-5'}`}>
             <TabsTrigger value="batches">
               {user?.role === 'uploader' ? 'My Batches' : 'Batches'}
             </TabsTrigger>
@@ -147,7 +147,10 @@ const AdminDashboard = () => {
               <TabsTrigger value="backup">Backup</TabsTrigger>
             )}
             {user?.role === 'super_admin' && (
-              <TabsTrigger value="users">Users</TabsTrigger>
+              <>
+                <TabsTrigger value="users">Users</TabsTrigger>
+                <TabsTrigger value="monetization">Monetization</TabsTrigger>
+              </>
             )}
           </TabsList>
 
@@ -166,9 +169,15 @@ const AdminDashboard = () => {
           )}
 
           {user?.role === 'super_admin' && (
-            <TabsContent value="users" className="space-y-6">
-              <UserManagement />
-            </TabsContent>
+            <>
+              <TabsContent value="users" className="space-y-6">
+                <UserManagement />
+              </TabsContent>
+              
+              <TabsContent value="monetization" className="space-y-6">
+                <MonetizationSettings />
+              </TabsContent>
+            </>
           )}
         </Tabs>
       </div>
