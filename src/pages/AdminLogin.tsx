@@ -17,12 +17,23 @@ const AdminLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Redirect if already authenticated
   if (isAuthenticated) {
     return <Navigate to="/admin/dashboard" replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email || !password) {
+      toast({
+        title: "Missing Fields",
+        description: "Please enter both email and password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -32,21 +43,19 @@ const AdminLogin = () => {
           title: "Login Successful",
           description: "Welcome to the admin panel!",
         });
-        // Wait a bit for the auth state to update
-        setTimeout(() => {
-          navigate('/admin/dashboard');
-        }, 1000);
+        navigate('/admin/dashboard');
       } else {
         toast({
           title: "Login Failed",
-          description: "Invalid email or password. Please try again.",
+          description: "Invalid email or password. Please check your credentials and try again.",
           variant: "destructive",
         });
       }
     } catch (error) {
+      console.error('Login error:', error);
       toast({
         title: "Error",
-        description: "An error occurred during login.",
+        description: "An unexpected error occurred during login.",
         variant: "destructive",
       });
     } finally {
@@ -112,9 +121,9 @@ const AdminLogin = () => {
             </form>
 
             <div className="mt-6 pt-6 border-t">
-              <h4 className="font-semibold mb-3">Demo Credentials:</h4>
+              <h4 className="font-semibold mb-3 text-center">Demo Credentials:</h4>
               <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                   <div>
                     <p><strong>Super Admin:</strong></p>
                     <p className="text-gray-600">shashanksv2009@gmail.com</p>
@@ -128,7 +137,7 @@ const AdminLogin = () => {
                   </Button>
                 </div>
                 
-                <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
                   <div>
                     <p><strong>Admin:</strong></p>
                     <p className="text-gray-600">admin@example.com</p>
@@ -142,7 +151,7 @@ const AdminLogin = () => {
                   </Button>
                 </div>
                 
-                <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                   <div>
                     <p><strong>Uploader:</strong></p>
                     <p className="text-gray-600">uploader@example.com</p>

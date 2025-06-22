@@ -42,7 +42,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       console.log('Loading profile for user:', supabaseUser.email);
       
-      // Try to get profile by email from our demo users
       const { data: profile, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -51,24 +50,35 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (error) {
         console.error('Error loading user profile:', error);
-        return null;
-      }
-
-      if (!profile) {
-        console.log('No profile found for user:', supabaseUser.email);
-        return null;
-      }
-
-      // Update the profile with the current user_id if it's not set
-      if (!profile.user_id) {
-        const { error: updateError } = await supabase
-          .from('user_profiles')
-          .update({ user_id: supabaseUser.id })
-          .eq('id', profile.id);
-
-        if (updateError) {
-          console.error('Error updating user profile:', updateError);
+        // Create profile if it doesn't exist for demo users
+        if (supabaseUser.email && ['shashanksv2009@gmail.com', 'admin@example.com', 'uploader@example.com'].includes(supabaseUser.email)) {
+          const role = supabaseUser.email === 'shashanksv2009@gmail.com' ? 'super_admin' : 
+                      supabaseUser.email === 'admin@example.com' ? 'admin' : 'uploader';
+          
+          const { data: newProfile, error: createError } = await supabase
+            .from('user_profiles')
+            .insert([{
+              user_id: supabaseUser.id,
+              email: supabaseUser.email,
+              role: role,
+              assigned_batches: role === 'uploader' ? [] : []
+            }])
+            .select()
+            .single();
+          
+          if (createError) {
+            console.error('Error creating user profile:', createError);
+            return null;
+          }
+          
+          return {
+            id: newProfile.id,
+            email: newProfile.email,
+            role: newProfile.role as 'super_admin' | 'admin' | 'uploader',
+            assignedBatches: newProfile.assigned_batches || []
+          };
         }
+        return null;
       }
 
       return {
@@ -86,7 +96,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     let mounted = true;
 
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
@@ -112,7 +121,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
     );
 
-    // Check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!mounted) return;
       

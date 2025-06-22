@@ -1,31 +1,28 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 
 export interface Lecture {
   id: string;
   title: string;
   videoUrl: string;
-  videoType: 'youtube' | 'direct';
-  dppUrl?: string;
+  videoType: 'youtube' | 'direct' | 'live';
   notesUrl?: string;
-  createdAt: Date;
+  dppUrl?: string;
   uploadedBy: string;
 }
 
 export interface Chapter {
   id: string;
   title: string;
+  orderIndex: number;
   lectures: Lecture[];
-  order: number;
 }
 
 export interface Subject {
   id: string;
   name: string;
-  chapters: Chapter[];
   color: string;
+  chapters: Chapter[];
 }
 
 export interface Batch {
@@ -33,7 +30,6 @@ export interface Batch {
   name: string;
   description: string;
   subjects: Subject[];
-  assignedUploaders: string[];
 }
 
 export interface LiveClass {
@@ -42,8 +38,8 @@ export interface LiveClass {
   batchId: string;
   subjectId: string;
   chapterId: string;
-  liveUrl: string;
   scheduledAt: Date;
+  liveUrl: string;
   status: 'scheduled' | 'live' | 'completed';
 }
 
@@ -51,17 +47,21 @@ interface DataContextType {
   batches: Batch[];
   liveClasses: LiveClass[];
   loading: boolean;
-  addBatch: (batch: Omit<Batch, 'id' | 'subjects' | 'assignedUploaders'>) => Promise<void>;
-  updateBatch: (id: string, batch: Partial<Batch>) => Promise<void>;
-  deleteBatch: (id: string) => Promise<void>;
-  addSubject: (batchId: string, subject: Omit<Subject, 'id' | 'chapters'>) => Promise<void>;
-  addChapter: (batchId: string, subjectId: string, chapter: Omit<Chapter, 'id' | 'lectures'>) => Promise<void>;
-  addLecture: (batchId: string, subjectId: string, chapterId: string, lecture: Omit<Lecture, 'id'>) => Promise<void>;
-  addLiveClass: (liveClass: Omit<LiveClass, 'id'>) => Promise<void>;
-  updateLiveClassStatus: (id: string, status: LiveClass['status']) => Promise<void>;
-  createBackup: () => Promise<void>;
-  restoreFromBackup: (date: string) => Promise<void>;
-  refreshData: () => Promise<void>;
+  addBatch: (batch: { name: string; description: string }) => void;
+  updateBatch: (id: string, updates: Partial<Batch>) => void;
+  deleteBatch: (id: string) => void;
+  addSubject: (batchId: string, subject: { name: string; color: string }) => void;
+  updateSubject: (batchId: string, subjectId: string, updates: Partial<Subject>) => void;
+  deleteSubject: (batchId: string, subjectId: string) => void;
+  addChapter: (batchId: string, subjectId: string, chapter: { title: string }) => void;
+  updateChapter: (batchId: string, subjectId: string, chapterId: string, updates: Partial<Chapter>) => void;
+  deleteChapter: (batchId: string, subjectId: string, chapterId: string) => void;
+  addLecture: (batchId: string, subjectId: string, chapterId: string, lecture: Omit<Lecture, 'id'>) => void;
+  updateLecture: (batchId: string, subjectId: string, chapterId: string, lectureId: string, updates: Partial<Lecture>) => void;
+  deleteLecture: (batchId: string, subjectId: string, chapterId: string, lectureId: string) => void;
+  addLiveClass: (liveClass: Omit<LiveClass, 'id'>) => void;
+  updateLiveClass: (id: string, updates: Partial<LiveClass>) => void;
+  deleteLiveClass: (id: string) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -74,420 +74,327 @@ export const useData = () => {
   return context;
 };
 
-export const DataProvider = ({ children }: { children: ReactNode }) => {
-  const [batches, setBatches] = useState<Batch[]>([]);
-  const [liveClasses, setLiveClasses] = useState<LiveClass[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-  const { user } = useAuth();
-
-  const loadBatches = async () => {
-    try {
-      // Load batches with all related data
-      let batchesQuery = supabase.from('batches').select('*');
-      
-      // Filter batches for uploaders based on their assigned batches
-      if (user?.role === 'uploader' && user.assignedBatches?.length > 0) {
-        batchesQuery = batchesQuery.in('id', user.assignedBatches);
+// Sample data
+const sampleBatches: Batch[] = [
+  {
+    id: '1',
+    name: 'NEET 2024-25',
+    description: 'Complete NEET preparation with Physics, Chemistry, and Biology',
+    subjects: [
+      {
+        id: '1',
+        name: 'Physics',
+        color: 'bg-blue-500',
+        chapters: [
+          {
+            id: '1',
+            title: 'Mechanics',
+            orderIndex: 1,
+            lectures: [
+              {
+                id: '1',
+                title: 'Introduction to Motion',
+                videoUrl: 'https://youtu.be/we9EIFANP44',
+                videoType: 'youtube',
+                notesUrl: 'https://d2bps9p1kiy4ka.cloudfront.net/sample-notes.pdf',
+                dppUrl: 'https://static.pw.live/sample-dpp.pdf',
+                uploadedBy: 'admin@example.com'
+              }
+            ]
+          }
+        ]
+      },
+      {
+        id: '2',
+        name: 'Chemistry',
+        color: 'bg-green-500',
+        chapters: [
+          {
+            id: '2',
+            title: 'Organic Chemistry',
+            orderIndex: 1,
+            lectures: [
+              {
+                id: '2',
+                title: 'Basic Organic Chemistry',
+                videoUrl: 'https://www.tgxdl2.workers.dev/v3/0:/stream/sample-video.mp4',
+                videoType: 'direct',
+                uploadedBy: 'uploader@example.com'
+              }
+            ]
+          }
+        ]
       }
-      
-      const { data: batchesData, error: batchesError } = await batchesQuery
-        .order('created_at', { ascending: false });
+    ]
+  },
+  {
+    id: '2',
+    name: 'JEE Main 2024-25',
+    description: 'Complete JEE Main preparation',
+    subjects: [
+      {
+        id: '3',
+        name: 'Mathematics',
+        color: 'bg-purple-500',
+        chapters: [
+          {
+            id: '3',
+            title: 'Calculus',
+            orderIndex: 1,
+            lectures: [
+              {
+                id: '3',
+                title: 'Limits and Derivatives',
+                videoUrl: 'https://youtu.be/sample-math-video',
+                videoType: 'youtube',
+                uploadedBy: 'admin@example.com'
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+];
 
-      if (batchesError) throw batchesError;
+const sampleLiveClasses: LiveClass[] = [
+  {
+    id: '1',
+    title: 'Live Physics Doubt Session',
+    batchId: '1',
+    subjectId: '1',
+    chapterId: '1',
+    scheduledAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
+    liveUrl: 'https://live-server.dev-boi.xyz/pw/live?session=physics-doubt',
+    status: 'scheduled'
+  }
+];
 
-      const batchesWithSubjects = await Promise.all(
-        (batchesData || []).map(async (batch) => {
-          // Load subjects for this batch
-          const { data: subjectsData, error: subjectsError } = await supabase
-            .from('subjects')
-            .select('*')
-            .eq('batch_id', batch.id);
+interface DataProviderProps {
+  children: ReactNode;
+}
 
-          if (subjectsError) throw subjectsError;
+export const DataProvider = ({ children }: DataProviderProps) => {
+  const [batches, setBatches] = useState<Batch[]>(sampleBatches);
+  const [liveClasses, setLiveClasses] = useState<LiveClass[]>(sampleLiveClasses);
+  const [loading, setLoading] = useState(false);
 
-          const subjectsWithChapters = await Promise.all(
-            (subjectsData || []).map(async (subject) => {
-              // Load chapters for this subject
-              const { data: chaptersData, error: chaptersError } = await supabase
-                .from('chapters')
-                .select('*')
-                .eq('subject_id', subject.id)
-                .order('order_index', { ascending: true });
+  const generateId = () => Math.random().toString(36).substr(2, 9);
 
-              if (chaptersError) throw chaptersError;
-
-              const chaptersWithLectures = await Promise.all(
-                (chaptersData || []).map(async (chapter) => {
-                  // Load lectures for this chapter
-                  const { data: lecturesData, error: lecturesError } = await supabase
-                    .from('lectures')
-                    .select('*')
-                    .eq('chapter_id', chapter.id)
-                    .order('created_at', { ascending: true });
-
-                  if (lecturesError) throw lecturesError;
-
-                  return {
-                    id: chapter.id,
-                    title: chapter.title,
-                    order: chapter.order_index,
-                    lectures: (lecturesData || []).map(lecture => ({
-                      id: lecture.id,
-                      title: lecture.title,
-                      videoUrl: lecture.video_url,
-                      videoType: lecture.video_type as 'youtube' | 'direct',
-                      dppUrl: lecture.dpp_url || undefined,
-                      notesUrl: lecture.notes_url || undefined,
-                      createdAt: new Date(lecture.created_at),
-                      uploadedBy: lecture.uploaded_by
-                    }))
-                  };
-                })
-              );
-
-              return {
-                id: subject.id,
-                name: subject.name,
-                color: subject.color,
-                chapters: chaptersWithLectures
-              };
-            })
-          );
-
-          return {
-            id: batch.id,
-            name: batch.name,
-            description: batch.description || '',
-            subjects: subjectsWithChapters,
-            assignedUploaders: batch.assigned_uploaders || []
-          };
-        })
-      );
-
-      setBatches(batchesWithSubjects);
-    } catch (error) {
-      console.error('Error loading batches:', error);
-      toast({
-        title: "Error Loading Data",
-        description: "Failed to load batches from database.",
-        variant: "destructive",
-      });
-    }
+  const addBatch = (batchData: { name: string; description: string }) => {
+    const newBatch: Batch = {
+      id: generateId(),
+      name: batchData.name,
+      description: batchData.description,
+      subjects: []
+    };
+    setBatches(prev => [...prev, newBatch]);
   };
 
-  const loadLiveClasses = async () => {
-    try {
-      let liveClassesQuery = supabase.from('live_classes').select('*');
-      
-      // Filter live classes for uploaders based on their assigned batches
-      if (user?.role === 'uploader' && user.assignedBatches?.length > 0) {
-        liveClassesQuery = liveClassesQuery.in('batch_id', user.assignedBatches);
-      }
-      
-      const { data, error } = await liveClassesQuery
-        .order('scheduled_at', { ascending: false });
-
-      if (error) throw error;
-
-      setLiveClasses((data || []).map(liveClass => ({
-        id: liveClass.id,
-        title: liveClass.title,
-        batchId: liveClass.batch_id,
-        subjectId: liveClass.subject_id,
-        chapterId: liveClass.chapter_id,
-        liveUrl: liveClass.live_url,
-        scheduledAt: new Date(liveClass.scheduled_at),
-        status: liveClass.status as 'scheduled' | 'live' | 'completed'
-      })));
-    } catch (error) {
-      console.error('Error loading live classes:', error);
-      toast({
-        title: "Error Loading Live Classes",
-        description: "Failed to load live classes from database.",
-        variant: "destructive",
-      });
-    }
+  const updateBatch = (id: string, updates: Partial<Batch>) => {
+    setBatches(prev => prev.map(batch => 
+      batch.id === id ? { ...batch, ...updates } : batch
+    ));
   };
 
-  const refreshData = async () => {
-    if (!user) return;
+  const deleteBatch = (id: string) => {
+    setBatches(prev => prev.filter(batch => batch.id !== id));
+  };
+
+  const addSubject = (batchId: string, subjectData: { name: string; color: string }) => {
+    const newSubject: Subject = {
+      id: generateId(),
+      name: subjectData.name,
+      color: subjectData.color,
+      chapters: []
+    };
     
-    setLoading(true);
-    await Promise.all([loadBatches(), loadLiveClasses()]);
-    setLoading(false);
+    setBatches(prev => prev.map(batch => 
+      batch.id === batchId 
+        ? { ...batch, subjects: [...batch.subjects, newSubject] }
+        : batch
+    ));
   };
 
-  useEffect(() => {
-    if (user) {
-      refreshData();
-    } else {
-      setBatches([]);
-      setLiveClasses([]);
-      setLoading(false);
-    }
-  }, [user]);
-
-  const addBatch = async (batch: Omit<Batch, 'id' | 'subjects' | 'assignedUploaders'>) => {
-    try {
-      const { data, error } = await supabase
-        .from('batches')
-        .insert([{
-          name: batch.name,
-          description: batch.description
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      await refreshData();
-      toast({
-        title: "Batch Created",
-        description: `${batch.name} has been created successfully.`,
-      });
-    } catch (error) {
-      console.error('Error adding batch:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create batch.",
-        variant: "destructive",
-      });
-    }
+  const updateSubject = (batchId: string, subjectId: string, updates: Partial<Subject>) => {
+    setBatches(prev => prev.map(batch => 
+      batch.id === batchId 
+        ? {
+            ...batch,
+            subjects: batch.subjects.map(subject =>
+              subject.id === subjectId ? { ...subject, ...updates } : subject
+            )
+          }
+        : batch
+    ));
   };
 
-  const updateBatch = async (id: string, batch: Partial<Batch>) => {
-    try {
-      const { error } = await supabase
-        .from('batches')
-        .update({
-          name: batch.name,
-          description: batch.description
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      await refreshData();
-      toast({
-        title: "Batch Updated",
-        description: "Batch has been updated successfully.",
-      });
-    } catch (error) {
-      console.error('Error updating batch:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update batch.",
-        variant: "destructive",
-      });
-    }
+  const deleteSubject = (batchId: string, subjectId: string) => {
+    setBatches(prev => prev.map(batch => 
+      batch.id === batchId 
+        ? {
+            ...batch,
+            subjects: batch.subjects.filter(subject => subject.id !== subjectId)
+          }
+        : batch
+    ));
   };
 
-  const deleteBatch = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('batches')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      await refreshData();
-      toast({
-        title: "Batch Deleted",
-        description: "Batch has been deleted successfully.",
-      });
-    } catch (error) {
-      console.error('Error deleting batch:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete batch.",
-        variant: "destructive",
-      });
-    }
+  const addChapter = (batchId: string, subjectId: string, chapterData: { title: string }) => {
+    const newChapter: Chapter = {
+      id: generateId(),
+      title: chapterData.title,
+      orderIndex: 1,
+      lectures: []
+    };
+    
+    setBatches(prev => prev.map(batch => 
+      batch.id === batchId 
+        ? {
+            ...batch,
+            subjects: batch.subjects.map(subject =>
+              subject.id === subjectId 
+                ? { ...subject, chapters: [...subject.chapters, newChapter] }
+                : subject
+            )
+          }
+        : batch
+    ));
   };
 
-  const addSubject = async (batchId: string, subject: Omit<Subject, 'id' | 'chapters'>) => {
-    try {
-      const { error } = await supabase
-        .from('subjects')
-        .insert([{
-          batch_id: batchId,
-          name: subject.name,
-          color: subject.color
-        }]);
-
-      if (error) throw error;
-
-      await refreshData();
-      toast({
-        title: "Subject Added",
-        description: `${subject.name} has been added successfully.`,
-      });
-    } catch (error) {
-      console.error('Error adding subject:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add subject.",
-        variant: "destructive",
-      });
-    }
+  const updateChapter = (batchId: string, subjectId: string, chapterId: string, updates: Partial<Chapter>) => {
+    setBatches(prev => prev.map(batch => 
+      batch.id === batchId 
+        ? {
+            ...batch,
+            subjects: batch.subjects.map(subject =>
+              subject.id === subjectId 
+                ? {
+                    ...subject,
+                    chapters: subject.chapters.map(chapter =>
+                      chapter.id === chapterId ? { ...chapter, ...updates } : chapter
+                    )
+                  }
+                : subject
+            )
+          }
+        : batch
+    ));
   };
 
-  const addChapter = async (batchId: string, subjectId: string, chapter: Omit<Chapter, 'id' | 'lectures'>) => {
-    try {
-      const { error } = await supabase
-        .from('chapters')
-        .insert([{
-          subject_id: subjectId,
-          title: chapter.title,
-          order_index: chapter.order
-        }]);
-
-      if (error) throw error;
-
-      await refreshData();
-      toast({
-        title: "Chapter Added",
-        description: `${chapter.title} has been added successfully.`,
-      });
-    } catch (error) {
-      console.error('Error adding chapter:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add chapter.",
-        variant: "destructive",
-      });
-    }
+  const deleteChapter = (batchId: string, subjectId: string, chapterId: string) => {
+    setBatches(prev => prev.map(batch => 
+      batch.id === batchId 
+        ? {
+            ...batch,
+            subjects: batch.subjects.map(subject =>
+              subject.id === subjectId 
+                ? {
+                    ...subject,
+                    chapters: subject.chapters.filter(chapter => chapter.id !== chapterId)
+                  }
+                : subject
+            )
+          }
+        : batch
+    ));
   };
 
-  const addLecture = async (batchId: string, subjectId: string, chapterId: string, lecture: Omit<Lecture, 'id'>) => {
-    try {
-      const { error } = await supabase
-        .from('lectures')
-        .insert([{
-          chapter_id: chapterId,
-          title: lecture.title,
-          video_url: lecture.videoUrl,
-          video_type: lecture.videoType,
-          dpp_url: lecture.dppUrl,
-          notes_url: lecture.notesUrl,
-          uploaded_by: lecture.uploadedBy
-        }]);
-
-      if (error) throw error;
-
-      await refreshData();
-      toast({
-        title: "Lecture Added",
-        description: `${lecture.title} has been added successfully.`,
-      });
-    } catch (error) {
-      console.error('Error adding lecture:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add lecture.",
-        variant: "destructive",
-      });
-    }
+  const addLecture = (batchId: string, subjectId: string, chapterId: string, lectureData: Omit<Lecture, 'id'>) => {
+    const newLecture: Lecture = {
+      id: generateId(),
+      ...lectureData
+    };
+    
+    setBatches(prev => prev.map(batch => 
+      batch.id === batchId 
+        ? {
+            ...batch,
+            subjects: batch.subjects.map(subject =>
+              subject.id === subjectId 
+                ? {
+                    ...subject,
+                    chapters: subject.chapters.map(chapter =>
+                      chapter.id === chapterId 
+                        ? { ...chapter, lectures: [...chapter.lectures, newLecture] }
+                        : chapter
+                    )
+                  }
+                : subject
+            )
+          }
+        : batch
+    ));
   };
 
-  const addLiveClass = async (liveClass: Omit<LiveClass, 'id'>) => {
-    try {
-      const { error } = await supabase
-        .from('live_classes')
-        .insert([{
-          title: liveClass.title,
-          batch_id: liveClass.batchId,
-          subject_id: liveClass.subjectId,
-          chapter_id: liveClass.chapterId,
-          live_url: liveClass.liveUrl,
-          scheduled_at: liveClass.scheduledAt.toISOString(),
-          status: liveClass.status
-        }]);
-
-      if (error) throw error;
-
-      await refreshData();
-      toast({
-        title: "Live Class Scheduled",
-        description: `${liveClass.title} has been scheduled successfully.`,
-      });
-    } catch (error) {
-      console.error('Error adding live class:', error);
-      toast({
-        title: "Error",
-        description: "Failed to schedule live class.",
-        variant: "destructive",
-      });
-    }
+  const updateLecture = (batchId: string, subjectId: string, chapterId: string, lectureId: string, updates: Partial<Lecture>) => {
+    setBatches(prev => prev.map(batch => 
+      batch.id === batchId 
+        ? {
+            ...batch,
+            subjects: batch.subjects.map(subject =>
+              subject.id === subjectId 
+                ? {
+                    ...subject,
+                    chapters: subject.chapters.map(chapter =>
+                      chapter.id === chapterId 
+                        ? {
+                            ...chapter,
+                            lectures: chapter.lectures.map(lecture =>
+                              lecture.id === lectureId ? { ...lecture, ...updates } : lecture
+                            )
+                          }
+                        : chapter
+                    )
+                  }
+                : subject
+            )
+          }
+        : batch
+    ));
   };
 
-  const updateLiveClassStatus = async (id: string, status: LiveClass['status']) => {
-    try {
-      const { error } = await supabase
-        .from('live_classes')
-        .update({ status })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      await refreshData();
-      toast({
-        title: "Status Updated",
-        description: `Live class status has been updated to ${status}.`,
-      });
-    } catch (error) {
-      console.error('Error updating live class status:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update live class status.",
-        variant: "destructive",
-      });
-    }
+  const deleteLecture = (batchId: string, subjectId: string, chapterId: string, lectureId: string) => {
+    setBatches(prev => prev.map(batch => 
+      batch.id === batchId 
+        ? {
+            ...batch,
+            subjects: batch.subjects.map(subject =>
+              subject.id === subjectId 
+                ? {
+                    ...subject,
+                    chapters: subject.chapters.map(chapter =>
+                      chapter.id === chapterId 
+                        ? {
+                            ...chapter,
+                            lectures: chapter.lectures.filter(lecture => lecture.id !== lectureId)
+                          }
+                        : chapter
+                    )
+                  }
+                : subject
+            )
+          }
+        : batch
+    ));
   };
 
-  const createBackup = async () => {
-    try {
-      const { error } = await supabase.rpc('create_daily_backup');
-      
-      if (error) throw error;
-
-      toast({
-        title: "Backup Created",
-        description: "Daily backup has been created successfully.",
-      });
-    } catch (error) {
-      console.error('Error creating backup:', error);
-      toast({
-        title: "Backup Error",
-        description: "Failed to create backup.",
-        variant: "destructive",
-      });
-    }
+  const addLiveClass = (liveClassData: Omit<LiveClass, 'id'>) => {
+    const newLiveClass: LiveClass = {
+      id: generateId(),
+      ...liveClassData
+    };
+    setLiveClasses(prev => [...prev, newLiveClass]);
   };
 
-  const restoreFromBackup = async (date: string) => {
-    try {
-      const { data, error } = await supabase.rpc('restore_from_backup', {
-        restore_date: date
-      });
-      
-      if (error) throw error;
+  const updateLiveClass = (id: string, updates: Partial<LiveClass>) => {
+    setLiveClasses(prev => prev.map(liveClass => 
+      liveClass.id === id ? { ...liveClass, ...updates } : liveClass
+    ));
+  };
 
-      await refreshData();
-      toast({
-        title: "Restore Complete",
-        description: data || "Data has been restored successfully.",
-      });
-    } catch (error) {
-      console.error('Error restoring from backup:', error);
-      toast({
-        title: "Restore Error",
-        description: "Failed to restore from backup.",
-        variant: "destructive",
-      });
-    }
+  const deleteLiveClass = (id: string) => {
+    setLiveClasses(prev => prev.filter(liveClass => liveClass.id !== id));
   };
 
   const value = {
@@ -498,13 +405,17 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     updateBatch,
     deleteBatch,
     addSubject,
+    updateSubject,
+    deleteSubject,
     addChapter,
+    updateChapter,
+    deleteChapter,
     addLecture,
+    updateLecture,
+    deleteLecture,
     addLiveClass,
-    updateLiveClassStatus,
-    createBackup,
-    restoreFromBackup,
-    refreshData
+    updateLiveClass,
+    deleteLiveClass
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
