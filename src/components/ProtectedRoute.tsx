@@ -20,6 +20,8 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       return acc;
     }, {} as Record<string, string>);
 
+    console.log('Checking cookies:', cookies);
+
     if (cookies.verified === 'true') {
       setAccessStatus('verified');
     } else if (cookies.ads === 'true') {
@@ -67,8 +69,13 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     <div>
       {children}
       {accessStatus === 'ads' && (
-        <div id="monetag-ads-container">
-          {/* Monetag ads will be injected here */}
+        <div id="monetag-ads-container" className="mt-8">
+          <div className="text-center p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-yellow-800 text-sm">Advertisement</p>
+            <div className="h-24 bg-gray-200 rounded mt-2 flex items-center justify-center">
+              <span className="text-gray-500">Ad Space</span>
+            </div>
+          </div>
         </div>
       )}
     </div>

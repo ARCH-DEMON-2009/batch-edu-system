@@ -42,43 +42,33 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       console.log('Loading profile for user:', supabaseUser.email);
       
-      // First try to get profile by user_id
-      let { data: profile, error } = await supabase
+      // Try to get profile by email from our demo users
+      const { data: profile, error } = await supabase
         .from('user_profiles')
         .select('*')
-        .eq('user_id', supabaseUser.id)
+        .eq('email', supabaseUser.email)
         .single();
 
-      // If no profile found by user_id, try by email
-      if (error && error.code === 'PGRST116') {
-        console.log('No profile found by user_id, trying by email...');
-        const { data: emailProfile, error: emailError } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('email', supabaseUser.email)
-          .single();
-
-        if (!emailError && emailProfile) {
-          // Update the profile with the user_id
-          const { error: updateError } = await supabase
-            .from('user_profiles')
-            .update({ user_id: supabaseUser.id })
-            .eq('id', emailProfile.id);
-
-          if (!updateError) {
-            profile = { ...emailProfile, user_id: supabaseUser.id };
-          }
-        }
-      }
-
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error loading user profile:', error);
         return null;
       }
 
       if (!profile) {
-        console.log('No profile found, this might be a new user');
+        console.log('No profile found for user:', supabaseUser.email);
         return null;
+      }
+
+      // Update the profile with the current user_id if it's not set
+      if (!profile.user_id) {
+        const { error: updateError } = await supabase
+          .from('user_profiles')
+          .update({ user_id: supabaseUser.id })
+          .eq('id', profile.id);
+
+        if (updateError) {
+          console.error('Error updating user profile:', updateError);
+        }
       }
 
       return {
@@ -94,42 +84,63 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   useEffect(() => {
+    let mounted = true;
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
+        
+        if (!mounted) return;
+        
         setSession(session);
         
         if (session?.user) {
           const userProfile = await loadUserProfile(session.user);
-          setUser(userProfile);
+          if (mounted) {
+            setUser(userProfile);
+          }
         } else {
-          setUser(null);
+          if (mounted) {
+            setUser(null);
+          }
         }
         
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     );
 
     // Check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!mounted) return;
+      
       console.log('Initial session check:', session?.user?.email);
       setSession(session);
       
       if (session?.user) {
         const userProfile = await loadUserProfile(session.user);
-        setUser(userProfile);
+        if (mounted) {
+          setUser(userProfile);
+        }
       }
       
-      setLoading(false);
+      if (mounted) {
+        setLoading(false);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       console.log('Attempting login for:', email);
+      setLoading(true);
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -138,6 +149,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (error) {
         console.error('Login error:', error);
+        setLoading(false);
         return false;
       }
 
@@ -145,6 +157,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       return true;
     } catch (error) {
       console.error('Login error:', error);
+      setLoading(false);
       return false;
     }
   };

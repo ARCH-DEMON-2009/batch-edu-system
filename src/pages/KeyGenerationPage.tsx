@@ -9,36 +9,52 @@ const KeyGenerationPage = () => {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // These are the original links that need to be shortened via LinkShortify
-  const originalLinks = {
-    server1: 'https://your-domain.com/verify?server=1&redirect=set-verified',
-    server2: 'https://your-domain.com/verify?server=2&redirect=set-verified'
+  // Load monetization config from localStorage (set by admin)
+  const getMonetizationConfig = () => {
+    const savedConfig = localStorage.getItem('monetizationConfig');
+    if (savedConfig) {
+      return JSON.parse(savedConfig);
+    }
+    return {
+      keyValidityTime: '3600', // 1 hour default
+      server1Link: 'https://your-domain.com/verify?server=1&redirect=set-verified',
+      server2Link: 'https://your-domain.com/verify?server=2&redirect=set-verified'
+    };
   };
+
+  const config = getMonetizationConfig();
 
   const handleServerSelection = (server: 'server1' | 'server2') => {
     setSelectedOption(server);
     
+    const originalLink = server === 'server1' ? config.server1Link : config.server2Link;
+    
     // Show the original link that needs to be shortened
     toast({
-      title: "Link to Shorten",
-      description: `Please shorten this link via LinkShortify: ${originalLinks[server]}`,
+      title: "Original Link for LinkShortify",
+      description: `Please copy and shorten this link: ${originalLink}`,
       duration: 10000,
     });
     
-    console.log(`Original link for ${server}:`, originalLinks[server]);
+    console.log(`=== LINK TO SHORTEN VIA LINKSHORTIFY ===`);
+    console.log(`Server: ${server}`);
+    console.log(`Original Link: ${originalLink}`);
+    console.log(`Duration: ${config.keyValidityTime} seconds`);
+    console.log(`========================================`);
     
-    // For now, we'll simulate the redirect after LinkShortify
-    // In production, this would be the shortened link
+    // For demo purposes, redirect to set-verified.html after 3 seconds
+    // In production, this would be the shortened LinkShortify URL
     setTimeout(() => {
-      window.location.href = '/set-verified.html';
-    }, 2000);
+      window.location.href = `/set-verified.html?duration=${config.keyValidityTime}`;
+    }, 3000);
   };
 
   const handleContinueWithAds = () => {
     setSelectedOption('ads');
     
-    // Set ads cookie
-    document.cookie = "ads=true; max-age=86400; path=/"; // 24 hours
+    // Set ads cookie with same duration as verification
+    const maxAge = parseInt(config.keyValidityTime);
+    document.cookie = `ads=true; max-age=${maxAge}; path=/`;
     
     toast({
       title: "Ads Mode Activated",
@@ -51,6 +67,13 @@ const KeyGenerationPage = () => {
     }, 1500);
   };
 
+  const getValidityTimeLabel = (seconds: string) => {
+    const sec = parseInt(seconds);
+    if (sec < 3600) return `${sec / 60} minutes`;
+    if (sec < 86400) return `${sec / 3600} hours`;
+    return `${sec / 86400} days`;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
@@ -60,6 +83,9 @@ const KeyGenerationPage = () => {
           </div>
           <h1 className="text-4xl font-bold text-white mb-2">Access Verification</h1>
           <p className="text-purple-100 text-lg">Choose your preferred access method</p>
+          <p className="text-purple-200 text-sm mt-2">
+            Access Duration: {getValidityTimeLabel(config.keyValidityTime)}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -126,7 +152,7 @@ const KeyGenerationPage = () => {
         <div className="mt-8 text-center">
           <div className="flex items-center justify-center text-white/70 text-sm">
             <Clock className="h-4 w-4 mr-2" />
-            <span>Access expires after the configured time period</span>
+            <span>Access expires after {getValidityTimeLabel(config.keyValidityTime)}</span>
           </div>
         </div>
       </div>

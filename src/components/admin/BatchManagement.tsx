@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Plus, Edit, Trash2, BookOpen, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,8 +25,19 @@ const BatchManagement = () => {
     return user?.assignedBatches?.includes(batchId) || false;
   };
 
+  const canCreateBatch = () => {
+    return user?.role === 'super_admin' || user?.role === 'admin';
+  };
+
   const handleCreateBatch = () => {
-    if (!newBatch.name.trim()) return;
+    if (!newBatch.name.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter a batch name.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     addBatch({
       name: newBatch.name,
@@ -63,15 +75,24 @@ const BatchManagement = () => {
     }
   }
 
+  const availableBatches = batches.filter(batch => canManageBatch(batch.id));
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Batch Management</h2>
-          <p className="text-gray-600">Create and manage educational batches</p>
+          <h2 className="text-2xl font-bold text-gray-900">
+            {user?.role === 'uploader' ? 'My Batches' : 'Batch Management'}
+          </h2>
+          <p className="text-gray-600">
+            {user?.role === 'uploader' 
+              ? 'Manage content for your assigned batches' 
+              : 'Create and manage educational batches'
+            }
+          </p>
         </div>
         
-        {(user?.role === 'super_admin' || user?.role === 'admin') && (
+        {canCreateBatch() && (
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -118,71 +139,69 @@ const BatchManagement = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {batches
-          .filter(batch => canManageBatch(batch.id))
-          .map((batch) => {
-            const totalChapters = batch.subjects.reduce((acc, subject) => acc + subject.chapters.length, 0);
-            const totalLectures = batch.subjects.reduce((acc, subject) => 
-              acc + subject.chapters.reduce((chapterAcc, chapter) => chapterAcc + chapter.lectures.length, 0), 0
-            );
+        {availableBatches.map((batch) => {
+          const totalChapters = batch.subjects.reduce((acc, subject) => acc + subject.chapters.length, 0);
+          const totalLectures = batch.subjects.reduce((acc, subject) => 
+            acc + subject.chapters.reduce((chapterAcc, chapter) => chapterAcc + chapter.lectures.length, 0), 0
+          );
 
-            return (
-              <Card key={batch.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>{batch.name}</span>
-                    {(user?.role === 'super_admin' || user?.role === 'admin') && (
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteBatch(batch.id, batch.name)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </CardTitle>
-                  <CardDescription>{batch.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div>
-                        <div className="text-2xl font-bold text-blue-600">{batch.subjects.length}</div>
-                        <div className="text-xs text-gray-500">Subjects</div>
-                      </div>
-                      <div>
-                        <div className="text-2xl font-bold text-green-600">{totalChapters}</div>
-                        <div className="text-xs text-gray-500">Chapters</div>
-                      </div>
-                      <div>
-                        <div className="text-2xl font-bold text-purple-600">{totalLectures}</div>
-                        <div className="text-xs text-gray-500">Lectures</div>
-                      </div>
+          return (
+            <Card key={batch.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>{batch.name}</span>
+                  {canCreateBatch() && (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteBatch(batch.id, batch.name)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-
-                    <Button 
-                      className="w-full" 
-                      onClick={() => setSelectedBatch(batch.id)}
-                    >
-                      <BookOpen className="h-4 w-4 mr-2" />
-                      Manage Content
-                    </Button>
+                  )}
+                </CardTitle>
+                <CardDescription>{batch.description}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <div className="text-2xl font-bold text-blue-600">{batch.subjects.length}</div>
+                      <div className="text-xs text-gray-500">Subjects</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-green-600">{totalChapters}</div>
+                      <div className="text-xs text-gray-500">Chapters</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-purple-600">{totalLectures}</div>
+                      <div className="text-xs text-gray-500">Lectures</div>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+
+                  <Button 
+                    className="w-full" 
+                    onClick={() => setSelectedBatch(batch.id)}
+                  >
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    Manage Content
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
-      {batches.filter(batch => canManageBatch(batch.id)).length === 0 && (
+      {availableBatches.length === 0 && (
         <div className="text-center py-12">
           <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-gray-600 mb-2">No Batches Available</h3>
           <p className="text-gray-500">
             {user?.role === 'uploader' 
-              ? "You haven't been assigned to any batches yet." 
+              ? "You haven't been assigned to any batches yet. Contact your admin to get batch assignments." 
               : "Create your first batch to get started."
             }
           </p>

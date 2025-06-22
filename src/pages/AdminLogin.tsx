@@ -32,7 +32,10 @@ const AdminLogin = () => {
           title: "Login Successful",
           description: "Welcome to the admin panel!",
         });
-        navigate('/admin/dashboard');
+        // Wait a bit for the auth state to update
+        setTimeout(() => {
+          navigate('/admin/dashboard');
+        }, 1000);
       } else {
         toast({
           title: "Login Failed",
@@ -49,6 +52,11 @@ const AdminLogin = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDemoLogin = (demoEmail: string, demoPassword: string) => {
+    setEmail(demoEmail);
+    setPassword(demoPassword);
   };
 
   return (
@@ -104,11 +112,49 @@ const AdminLogin = () => {
             </form>
 
             <div className="mt-6 pt-6 border-t">
-              <h4 className="font-semibold mb-2">Demo Credentials:</h4>
-              <div className="space-y-1 text-sm text-gray-600">
-                <p><strong>Super Admin:</strong> shashanksv2009@gmail.com / admin123</p>
-                <p><strong>Admin:</strong> admin@example.com / admin123</p>
-                <p><strong>Uploader:</strong> uploader@example.com / uploader123</p>
+              <h4 className="font-semibold mb-3">Demo Credentials:</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <div>
+                    <p><strong>Super Admin:</strong></p>
+                    <p className="text-gray-600">shashanksv2009@gmail.com</p>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleDemoLogin('shashanksv2009@gmail.com', 'admin123')}
+                  >
+                    Use
+                  </Button>
+                </div>
+                
+                <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <div>
+                    <p><strong>Admin:</strong></p>
+                    <p className="text-gray-600">admin@example.com</p>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleDemoLogin('admin@example.com', 'admin123')}
+                  >
+                    Use
+                  </Button>
+                </div>
+                
+                <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <div>
+                    <p><strong>Uploader:</strong></p>
+                    <p className="text-gray-600">uploader@example.com</p>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleDemoLogin('uploader@example.com', 'uploader123')}
+                  >
+                    Use
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>
