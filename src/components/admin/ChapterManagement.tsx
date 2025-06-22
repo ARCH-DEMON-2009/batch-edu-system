@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { ArrowLeft, Plus, Play, FileText, Download, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -21,7 +22,7 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
   const [isCreateChapterDialogOpen, setIsCreateChapterDialogOpen] = useState(false);
   const [isCreateLectureDialogOpen, setIsCreateLectureDialogOpen] = useState(false);
   const [selectedChapter, setSelectedChapter] = useState<string | null>(null);
-  const [newChapter, setNewChapter] = useState({ title: '', order: 1 });
+  const [newChapter, setNewChapter] = useState({ title: '' });
   const [newLecture, setNewLecture] = useState({
     title: '',
     videoUrl: '',
@@ -38,8 +39,7 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
     if (!newChapter.title.trim()) return;
 
     addChapter(batch.id, subject.id, {
-      title: newChapter.title,
-      order: newChapter.order
+      title: newChapter.title
     });
 
     toast({
@@ -47,7 +47,7 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
       description: `${newChapter.title} has been added to ${subject.name}.`,
     });
 
-    setNewChapter({ title: '', order: 1 });
+    setNewChapter({ title: '' });
     setIsCreateChapterDialogOpen(false);
   };
 
@@ -60,7 +60,6 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
       videoType: newLecture.videoType,
       dppUrl: newLecture.dppUrl || undefined,
       notesUrl: newLecture.notesUrl || undefined,
-      createdAt: new Date(),
       uploadedBy: user?.email || 'Unknown'
     });
 
@@ -125,16 +124,6 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
                     placeholder="e.g., Laws of Motion"
                     value={newChapter.title}
                     onChange={(e) => setNewChapter({ ...newChapter, title: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="chapter-order">Order</Label>
-                  <Input
-                    id="chapter-order"
-                    type="number"
-                    min="1"
-                    value={newChapter.order}
-                    onChange={(e) => setNewChapter({ ...newChapter, order: parseInt(e.target.value) || 1 })}
                   />
                 </div>
               </div>
@@ -244,12 +233,12 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
 
       <div className="space-y-6">
         {subject.chapters
-          .sort((a, b) => a.order - b.order)
+          .sort((a, b) => a.orderIndex - b.orderIndex)
           .map((chapter) => (
             <Card key={chapter.id}>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  <span>Chapter {chapter.order}: {chapter.title}</span>
+                  <span>Chapter {chapter.orderIndex}: {chapter.title}</span>
                   <span className="text-sm font-normal text-gray-500">
                     {chapter.lectures.length} lectures
                   </span>

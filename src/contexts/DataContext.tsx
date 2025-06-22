@@ -1,11 +1,11 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 export interface Lecture {
   id: string;
   title: string;
   videoUrl: string;
-  videoType: 'youtube' | 'direct' | 'live';
+  videoType: 'youtube' | 'direct';
   notesUrl?: string;
   dppUrl?: string;
   uploadedBy: string;
@@ -61,7 +61,10 @@ interface DataContextType {
   deleteLecture: (batchId: string, subjectId: string, chapterId: string, lectureId: string) => void;
   addLiveClass: (liveClass: Omit<LiveClass, 'id'>) => void;
   updateLiveClass: (id: string, updates: Partial<LiveClass>) => void;
+  updateLiveClassStatus: (id: string, status: 'scheduled' | 'live' | 'completed') => void;
   deleteLiveClass: (id: string) => void;
+  createBackup: () => Promise<void>;
+  restoreFromBackup: (date: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -178,6 +181,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
   const [batches, setBatches] = useState<Batch[]>(sampleBatches);
   const [liveClasses, setLiveClasses] = useState<LiveClass[]>(sampleLiveClasses);
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
   const generateId = () => Math.random().toString(36).substr(2, 9);
 
@@ -241,10 +245,14 @@ export const DataProvider = ({ children }: DataProviderProps) => {
   };
 
   const addChapter = (batchId: string, subjectId: string, chapterData: { title: string }) => {
+    const batch = batches.find(b => b.id === batchId);
+    const subject = batch?.subjects.find(s => s.id === subjectId);
+    const nextOrderIndex = subject ? subject.chapters.length + 1 : 1;
+
     const newChapter: Chapter = {
       id: generateId(),
       title: chapterData.title,
-      orderIndex: 1,
+      orderIndex: nextOrderIndex,
       lectures: []
     };
     
@@ -393,8 +401,77 @@ export const DataProvider = ({ children }: DataProviderProps) => {
     ));
   };
 
+  const updateLiveClassStatus = (id: string, status: 'scheduled' | 'live' | 'completed') => {
+    setLiveClasses(prev => prev.map(liveClass => 
+      liveClass.id === id ? { ...liveClass, status } : liveClass
+    ));
+  };
+
   const deleteLiveClass = (id: string) => {
     setLiveClasses(prev => prev.filter(liveClass => liveClass.id !== id));
+  };
+
+  const createBackup = async () => {
+    try {
+      setLoading(true);
+      // Simulate backup creation
+      const backupData = {
+        batches,
+        liveClasses,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Store in localStorage as a simple backup solution
+      const backupKey = `backup_${new Date().toISOString().split('T')[0]}`;
+      localStorage.setItem(backupKey, JSON.stringify(backupData));
+      
+      toast({
+        title: "Backup Created",
+        description: "Your data has been backed up successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Backup Failed",
+        description: "Failed to create backup. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const restoreFromBackup = async (date: string) => {
+    try {
+      setLoading(true);
+      const backupKey = `backup_${date}`;
+      const backupData = localStorage.getItem(backupKey);
+      
+      if (!backupData) {
+        toast({
+          title: "Backup Not Found",
+          description: `No backup found for ${date}.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const parsedData = JSON.parse(backupData);
+      setBatches(parsedData.batches || []);
+      setLiveClasses(parsedData.liveClasses || []);
+      
+      toast({
+        title: "Backup Restored",
+        description: `Data restored from ${date} successfully.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Restore Failed",
+        description: "Failed to restore backup. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const value = {
@@ -415,7 +492,10 @@ export const DataProvider = ({ children }: DataProviderProps) => {
     deleteLecture,
     addLiveClass,
     updateLiveClass,
-    deleteLiveClass
+    updateLiveClassStatus,
+    deleteLiveClass,
+    createBackup,
+    restoreFromBackup
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
