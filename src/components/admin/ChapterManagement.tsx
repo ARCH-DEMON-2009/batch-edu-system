@@ -151,6 +151,10 @@ const ChapterManagement = ({ batch, subject, onBack, onUpdate }: ChapterManageme
     window.open(url, '_blank');
   };
 
+  const handleVideoTypeChange = (value: string) => {
+    setNewLecture({ ...newLecture, video_type: value as 'youtube' | 'direct' });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -243,7 +247,7 @@ const ChapterManagement = ({ batch, subject, onBack, onUpdate }: ChapterManageme
 
                 <div>
                   <Label htmlFor="video-type">Video Type</Label>
-                  <Select value={newLecture.video_type} onValueChange={(value: 'youtube' | 'direct') => setNewLecture({ ...newLecture, video_type: value })}>
+                  <Select value={newLecture.video_type} onValueChange={handleVideoTypeChange}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -323,7 +327,7 @@ const ChapterManagement = ({ batch, subject, onBack, onUpdate }: ChapterManageme
                 {chapter.lectures.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {chapter.lectures.map((lecture) => {
-                      const thumbnail = getVideoThumbnail(lecture.video_url, lecture.video_type);
+                      const thumbnail = getVideoThumbnail(lecture.video_url, lecture.video_type as 'youtube' | 'direct');
                       
                       return (
                         <Card key={lecture.id} className="overflow-hidden">
