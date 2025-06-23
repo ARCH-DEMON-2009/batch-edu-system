@@ -8,75 +8,135 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useData, Batch, Subject, Chapter } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabaseService, SupabaseBatch, SupabaseSubject } from '@/services/supabaseService';
 
 interface ChapterManagementProps {
-  batch: Batch;
-  subject: Subject;
+  batch: SupabaseBatch;
+  subject: SupabaseSubject;
   onBack: () => void;
+  onUpdate: () => void;
 }
 
-const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) => {
+const ChapterManagement = ({ batch, subject, onBack, onUpdate }: ChapterManagementProps) => {
   const [isCreateChapterDialogOpen, setIsCreateChapterDialogOpen] = useState(false);
   const [isCreateLectureDialogOpen, setIsCreateLectureDialogOpen] = useState(false);
   const [selectedChapter, setSelectedChapter] = useState<string | null>(null);
   const [newChapter, setNewChapter] = useState({ title: '' });
   const [newLecture, setNewLecture] = useState({
     title: '',
-    videoUrl: '',
-    videoType: 'youtube' as 'youtube' | 'direct',
-    dppUrl: '',
-    notesUrl: ''
+    video_url: '',
+    video_type: 'youtube' as 'youtube' | 'direct',
+    dpp_url: '',
+    notes_url: ''
   });
 
-  const { addChapter, addLecture } = useData();
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const handleCreateChapter = () => {
+  const handleCreateChapter = async () => {
     if (!newChapter.title.trim()) return;
 
-    addChapter(batch.id, subject.id, {
-      title: newChapter.title
-    });
+    try {
+      await supabaseService.createChapter(subject.id, {
+        title: newChapter.title
+      });
 
-    toast({
-      title: "Chapter Created",
-      description: `${newChapter.title} has been added to ${subject.name}.`,
-    });
+      toast({
+        title: "Chapter Created",
+        description: `${newChapter.title} has been added to ${subject.name}.`,
+      });
 
-    setNewChapter({ title: '' });
-    setIsCreateChapterDialogOpen(false);
+      setNewChapter({ title: '' });
+      setIsCreateChapterDialogOpen(false);
+      onUpdate();
+    } catch (error) {
+      console.error('Error creating chapter:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create chapter.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleCreateLecture = () => {
-    if (!newLecture.title.trim() || !newLecture.videoUrl.trim() || !selectedChapter) return;
+  const handleCreateLecture = async () => {
+    if (!newLecture.title.trim() || !newLecture.video_url.trim() || !selectedChapter) return;
 
-    addLecture(batch.id, subject.id, selectedChapter, {
-      title: newLecture.title,
-      videoUrl: newLecture.videoUrl,
-      videoType: newLecture.videoType,
-      dppUrl: newLecture.dppUrl || undefined,
-      notesUrl: newLecture.notesUrl || undefined,
-      uploadedBy: user?.email || 'Unknown'
-    });
+    try {
+      await supabaseService.createLecture(selectedChapter, {
+        title: newLecture.title,
+        video_url: newLecture.video_url,
+        video_type: newLecture.video_type,
+        dpp_url: newLecture.dpp_url || undefined,
+        notes_url: newLecture.notes_url || undefined,
+        uploaded_by: user?.email || 'Unknown'
+      });
 
-    toast({
-      title: "Lecture Added",
-      description: `${newLecture.title} has been added successfully.`,
-    });
+      toast({
+        title: "Lecture Added",
+        description: `${newLecture.title} has been added successfully.`,
+      });
 
-    setNewLecture({
-      title: '',
-      videoUrl: '',
-      videoType: 'youtube',
-      dppUrl: '',
-      notesUrl: ''
-    });
-    setSelectedChapter(null);
-    setIsCreateLectureDialogOpen(false);
+      setNewLecture({
+        title: '',
+        video_url: '',
+        video_type: 'youtube',
+        dpp_url: '',
+        notes_url: ''
+      });
+      setSelectedChapter(null);
+      setIsCreateLectureDialogOpen(false);
+      onUpdate();
+    } catch (error) {
+      console.error('Error creating lecture:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create lecture.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteChapter = async (chapterId: string, chapterTitle: string) => {
+    if (confirm(`Are you sure you want to delete "${chapterTitle}"? This will also delete all lectures in this chapter.`)) {
+      try {
+        await supabaseService.deleteChapter(chapterId);
+        toast({
+          title: "Chapter Deleted",
+          description: `${chapterTitle} has been deleted successfully.`,
+        });
+        onUpdate();
+      } catch (error) {
+        console.error('Error deleting chapter:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete chapter.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleDeleteLecture = async (lectureId: string, lectureTitle: string) => {
+    if (confirm(`Are you sure you want to delete "${lectureTitle}"?`)) {
+      try {
+        await supabaseService.deleteLecture(lectureId);
+        toast({
+          title: "Lecture Deleted",
+          description: `${lectureTitle} has been deleted successfully.`,
+        });
+        onUpdate();
+      } catch (error) {
+        console.error('Error deleting lecture:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete lecture.",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   const getVideoThumbnail = (url: string, type: 'youtube' | 'direct') => {
@@ -85,6 +145,10 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
       return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : null;
     }
     return null;
+  };
+
+  const openUrl = (url: string) => {
+    window.open(url, '_blank');
   };
 
   return (
@@ -160,7 +224,7 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
                     <SelectContent>
                       {subject.chapters.map((chapter) => (
                         <SelectItem key={chapter.id} value={chapter.id}>
-                          {chapter.title}
+                          Chapter {chapter.order_index}: {chapter.title}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -179,7 +243,7 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
 
                 <div>
                   <Label htmlFor="video-type">Video Type</Label>
-                  <Select value={newLecture.videoType} onValueChange={(value: 'youtube' | 'direct') => setNewLecture({ ...newLecture, videoType: value })}>
+                  <Select value={newLecture.video_type} onValueChange={(value: 'youtube' | 'direct') => setNewLecture({ ...newLecture, video_type: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -194,9 +258,9 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
                   <Label htmlFor="video-url">Video URL</Label>
                   <Input
                     id="video-url"
-                    placeholder={newLecture.videoType === 'youtube' ? 'https://youtu.be/...' : 'https://example.com/video.mp4'}
-                    value={newLecture.videoUrl}
-                    onChange={(e) => setNewLecture({ ...newLecture, videoUrl: e.target.value })}
+                    placeholder={newLecture.video_type === 'youtube' ? 'https://youtu.be/...' : 'https://example.com/video.mp4'}
+                    value={newLecture.video_url}
+                    onChange={(e) => setNewLecture({ ...newLecture, video_url: e.target.value })}
                   />
                 </div>
 
@@ -205,8 +269,8 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
                   <Input
                     id="dpp-url"
                     placeholder="https://static.pw.live/...pdf"
-                    value={newLecture.dppUrl}
-                    onChange={(e) => setNewLecture({ ...newLecture, dppUrl: e.target.value })}
+                    value={newLecture.dpp_url}
+                    onChange={(e) => setNewLecture({ ...newLecture, dpp_url: e.target.value })}
                   />
                 </div>
 
@@ -215,8 +279,8 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
                   <Input
                     id="notes-url"
                     placeholder="https://d2bps9p1kiy4ka.cloudfront.net/...pdf"
-                    value={newLecture.notesUrl}
-                    onChange={(e) => setNewLecture({ ...newLecture, notesUrl: e.target.value })}
+                    value={newLecture.notes_url}
+                    onChange={(e) => setNewLecture({ ...newLecture, notes_url: e.target.value })}
                   />
                 </div>
               </div>
@@ -233,22 +297,33 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
 
       <div className="space-y-6">
         {subject.chapters
-          .sort((a, b) => a.orderIndex - b.orderIndex)
+          .sort((a, b) => a.order_index - b.order_index)
           .map((chapter) => (
             <Card key={chapter.id}>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  <span>Chapter {chapter.orderIndex}: {chapter.title}</span>
-                  <span className="text-sm font-normal text-gray-500">
-                    {chapter.lectures.length} lectures
-                  </span>
+                  <span>Chapter {chapter.order_index}: {chapter.title}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-normal text-gray-500">
+                      {chapter.lectures.length} lectures
+                    </span>
+                    {(user?.role === 'super_admin' || user?.role === 'admin') && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteChapter(chapter.id, chapter.title)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {chapter.lectures.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {chapter.lectures.map((lecture) => {
-                      const thumbnail = getVideoThumbnail(lecture.videoUrl, lecture.videoType);
+                      const thumbnail = getVideoThumbnail(lecture.video_url, lecture.video_type);
                       
                       return (
                         <Card key={lecture.id} className="overflow-hidden">
@@ -266,29 +341,59 @@ const ChapterManagement = ({ batch, subject, onBack }: ChapterManagementProps) =
                             </div>
                           )}
                           <CardContent className="p-4">
-                            <h4 className="font-medium mb-2 line-clamp-2">{lecture.title}</h4>
+                            <div className="flex items-start justify-between mb-2">
+                              <h4 className="font-medium line-clamp-2 flex-1">{lecture.title}</h4>
+                              {(user?.role === 'super_admin' || user?.role === 'admin') && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="ml-2 p-1 h-auto"
+                                  onClick={() => handleDeleteLecture(lecture.id, lecture.title)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
                             <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
                               <Play className="h-3 w-3" />
-                              <span>{lecture.videoType === 'youtube' ? 'YouTube' : 'Direct'}</span>
+                              <span>{lecture.video_type === 'youtube' ? 'YouTube' : 'Direct'}</span>
                             </div>
                             
-                            <div className="flex gap-2">
-                              <Button size="sm" className="flex-1">
+                            <div className="space-y-2">
+                              <Button 
+                                size="sm" 
+                                className="w-full"
+                                onClick={() => openUrl(lecture.video_url)}
+                              >
                                 <Play className="h-3 w-3 mr-1" />
-                                Watch
+                                Watch Video
                               </Button>
                               
-                              {lecture.dppUrl && (
-                                <Button size="sm" variant="outline">
-                                  <FileText className="h-3 w-3" />
-                                </Button>
-                              )}
-                              
-                              {lecture.notesUrl && (
-                                <Button size="sm" variant="outline">
-                                  <Download className="h-3 w-3" />
-                                </Button>
-                              )}
+                              <div className="flex gap-2">
+                                {lecture.dpp_url && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="flex-1"
+                                    onClick={() => openUrl(lecture.dpp_url!)}
+                                  >
+                                    <FileText className="h-3 w-3 mr-1" />
+                                    DPP
+                                  </Button>
+                                )}
+                                
+                                {lecture.notes_url && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="flex-1"
+                                    onClick={() => openUrl(lecture.notes_url!)}
+                                  >
+                                    <Download className="h-3 w-3 mr-1" />
+                                    Notes
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           </CardContent>
                         </Card>

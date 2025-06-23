@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, BookOpen, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,16 +7,17 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabaseService, SupabaseBatch } from '@/services/supabaseService';
 import SubjectManagement from './SubjectManagement';
 
 const BatchManagement = () => {
   const [selectedBatch, setSelectedBatch] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newBatch, setNewBatch] = useState({ name: '', description: '' });
-  const { batches, addBatch, deleteBatch, updateBatch } = useData();
+  const [batches, setBatches] = useState<SupabaseBatch[]>([]);
+  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -29,7 +30,28 @@ const BatchManagement = () => {
     return user?.role === 'super_admin' || user?.role === 'admin';
   };
 
-  const handleCreateBatch = () => {
+  const loadBatches = async () => {
+    try {
+      setLoading(true);
+      const data = await supabaseService.getBatches();
+      setBatches(data);
+    } catch (error) {
+      console.error('Error loading batches:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load batches.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadBatches();
+  }, []);
+
+  const handleCreateBatch = async () => {
     if (!newBatch.name.trim()) {
       toast({
         title: "Missing Information",
@@ -39,43 +61,72 @@ const BatchManagement = () => {
       return;
     }
 
-    addBatch({
-      name: newBatch.name,
-      description: newBatch.description
-    });
+    try {
+      await supabaseService.createBatch({
+        name: newBatch.name,
+        description: newBatch.description
+      });
 
-    toast({
-      title: "Batch Created",
-      description: `${newBatch.name} has been created successfully.`,
-    });
-
-    setNewBatch({ name: '', description: '' });
-    setIsCreateDialogOpen(false);
-  };
-
-  const handleDeleteBatch = (batchId: string, batchName: string) => {
-    if (confirm(`Are you sure you want to delete "${batchName}"? This action cannot be undone.`)) {
-      deleteBatch(batchId);
       toast({
-        title: "Batch Deleted",
-        description: `${batchName} has been deleted successfully.`,
+        title: "Batch Created",
+        description: `${newBatch.name} has been created successfully.`,
+      });
+
+      setNewBatch({ name: '', description: '' });
+      setIsCreateDialogOpen(false);
+      loadBatches();
+    } catch (error) {
+      console.error('Error creating batch:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create batch.",
+        variant: "destructive",
       });
     }
   };
 
-  if (selectedBatch)  {
+  const handleDeleteBatch = async (batchId: string, batchName: string) => {
+    if (confirm(`Are you sure you want to delete "${batchName}"? This action cannot be undone.`)) {
+      try {
+        await supabaseService.deleteBatch(batchId);
+        toast({
+          title: "Batch Deleted",
+          description: `${batchName} has been deleted successfully.`,
+        });
+        loadBatches();
+      } catch (error) {
+        console.error('Error deleting batch:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete batch.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  if (selectedBatch) {
     const batch = batches.find(b => b.id === selectedBatch);
     if (batch) {
       return (
         <SubjectManagement 
           batch={batch} 
-          onBack={() => setSelectedBatch(null)} 
+          onBack={() => setSelectedBatch(null)}
+          onUpdate={loadBatches}
         />
       );
     }
   }
 
   const availableBatches = batches.filter(batch => canManageBatch(batch.id));
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -146,7 +197,7 @@ const BatchManagement = () => {
           );
 
           return (
-            <Card key={batch.id} className="hover:shadow-lg transition-shadow">
+            <Card key={batch.id} className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <span>{batch.name}</span>
@@ -155,7 +206,10 @@ const BatchManagement = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDeleteBatch(batch.id, batch.name)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteBatch(batch.id, batch.name);
+                        }}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

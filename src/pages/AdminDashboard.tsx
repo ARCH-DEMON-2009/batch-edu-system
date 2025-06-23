@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { 
   Users, 
   BookOpen, 
@@ -14,7 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
-import { useData } from '@/contexts/DataContext';
+import { useToast } from '@/hooks/use-toast';
+import { supabaseService, SupabaseBatch } from '@/services/supabaseService';
 import BatchManagement from '@/components/admin/BatchManagement';
 import UserManagement from '@/components/admin/UserManagement';
 import LiveClassManagement from '@/components/admin/LiveClassManagement';
@@ -23,11 +25,39 @@ import MonetizationSettings from '@/components/admin/MonetizationSettings';
 
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
-  const { batches, liveClasses, loading } = useData();
+  const { toast } = useToast();
+  const [batches, setBatches] = useState<SupabaseBatch[]>([]);
+  const [liveClasses, setLiveClasses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const handleLogout = () => {
     logout();
   };
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [batchesData, liveClassesData] = await Promise.all([
+        supabaseService.getBatches(),
+        supabaseService.getLiveClasses()
+      ]);
+      setBatches(batchesData);
+      setLiveClasses(liveClassesData);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   // Calculate statistics
   const totalBatches = batches.length;

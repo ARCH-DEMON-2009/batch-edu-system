@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { ArrowLeft, Plus, BookOpen, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,21 +7,21 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useData, Batch } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabaseService, SupabaseBatch, SupabaseSubject } from '@/services/supabaseService';
 import ChapterManagement from './ChapterManagement';
 
 interface SubjectManagementProps {
-  batch: Batch;
+  batch: SupabaseBatch;
   onBack: () => void;
+  onUpdate: () => void;
 }
 
-const SubjectManagement = ({ batch, onBack }: SubjectManagementProps) => {
+const SubjectManagement = ({ batch, onBack, onUpdate }: SubjectManagementProps) => {
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newSubject, setNewSubject] = useState({ name: '', color: 'bg-blue-500' });
-  const { addSubject } = useData();
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -35,21 +36,51 @@ const SubjectManagement = ({ batch, onBack }: SubjectManagementProps) => {
     { value: 'bg-gray-500', label: 'Gray' }
   ];
 
-  const handleCreateSubject = () => {
+  const handleCreateSubject = async () => {
     if (!newSubject.name.trim()) return;
 
-    addSubject(batch.id, {
-      name: newSubject.name,
-      color: newSubject.color
-    });
+    try {
+      await supabaseService.createSubject(batch.id, {
+        name: newSubject.name,
+        color: newSubject.color
+      });
 
-    toast({
-      title: "Subject Created",
-      description: `${newSubject.name} has been added to ${batch.name}.`,
-    });
+      toast({
+        title: "Subject Created",
+        description: `${newSubject.name} has been added to ${batch.name}.`,
+      });
 
-    setNewSubject({ name: '', color: 'bg-blue-500' });
-    setIsCreateDialogOpen(false);
+      setNewSubject({ name: '', color: 'bg-blue-500' });
+      setIsCreateDialogOpen(false);
+      onUpdate();
+    } catch (error) {
+      console.error('Error creating subject:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create subject.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteSubject = async (subjectId: string, subjectName: string) => {
+    if (confirm(`Are you sure you want to delete "${subjectName}"? This will also delete all chapters and lectures.`)) {
+      try {
+        await supabaseService.deleteSubject(subjectId);
+        toast({
+          title: "Subject Deleted",
+          description: `${subjectName} has been deleted successfully.`,
+        });
+        onUpdate();
+      } catch (error) {
+        console.error('Error deleting subject:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete subject.",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   if (selectedSubject) {
@@ -59,7 +90,11 @@ const SubjectManagement = ({ batch, onBack }: SubjectManagementProps) => {
         <ChapterManagement 
           batch={batch}
           subject={subject} 
-          onBack={() => setSelectedSubject(null)} 
+          onBack={() => setSelectedSubject(null)}
+          onUpdate={() => {
+            onUpdate();
+            setSelectedSubject(null);
+          }}
         />
       );
     }
@@ -143,7 +178,22 @@ const SubjectManagement = ({ batch, onBack }: SubjectManagementProps) => {
               <CardHeader className={`${subject.color} text-white rounded-t-lg`}>
                 <CardTitle className="flex items-center justify-between">
                   <span>{subject.name}</span>
-                  <BookOpen className="h-5 w-5" />
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5" />
+                    {(user?.role === 'super_admin' || user?.role === 'admin') && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-white hover:bg-white/20 p-1 h-auto"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSubject(subject.id, subject.name);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
