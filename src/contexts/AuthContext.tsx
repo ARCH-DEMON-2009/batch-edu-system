@@ -50,43 +50,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (error) {
         console.error('Error loading user profile:', error);
-        // Create profile if it doesn't exist for demo users
-        if (supabaseUser.email && ['shashanksv2009@gmail.com', 'admin@example.com', 'uploader@example.com'].includes(supabaseUser.email)) {
-          const role = supabaseUser.email === 'shashanksv2009@gmail.com' ? 'super_admin' : 
-                      supabaseUser.email === 'admin@example.com' ? 'admin' : 'uploader';
-          
-          const { data: newProfile, error: createError } = await supabase
-            .from('user_profiles')
-            .insert([{
-              user_id: supabaseUser.id,
-              email: supabaseUser.email,
-              role: role,
-              assigned_batches: role === 'uploader' ? [] : []
-            }])
-            .select()
-            .single();
-          
-          if (createError) {
-            console.error('Error creating user profile:', createError);
-            return null;
-          }
-          
-          return {
-            id: newProfile.id,
-            email: newProfile.email,
-            role: newProfile.role as 'super_admin' | 'admin' | 'uploader',
-            assignedBatches: newProfile.assigned_batches || []
-          };
-        }
         return null;
       }
 
-      return {
-        id: profile.id,
-        email: profile.email,
-        role: profile.role as 'super_admin' | 'admin' | 'uploader',
-        assignedBatches: profile.assigned_batches || []
-      };
+      if (profile) {
+        return {
+          id: profile.id,
+          email: profile.email,
+          role: profile.role as 'super_admin' | 'admin' | 'uploader',
+          assignedBatches: profile.assigned_batches || []
+        };
+      }
+
+      return null;
     } catch (error) {
       console.error('Error in loadUserProfile:', error);
       return null;
