@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, BookOpen, Play, FileText, Download, Calendar } from 'lucide-react';
@@ -79,9 +78,9 @@ const BatchDetailPage = () => {
                   <div className="space-y-6">
                     {/* Video Player */}
                     <div className="aspect-video bg-black rounded-lg overflow-hidden">
-                      {selectedLecture.videoType === 'youtube' ? (
+                      {selectedLecture.video_type === 'youtube' ? (
                         <iframe
-                          src={getYouTubeEmbedUrl(selectedLecture.videoUrl) || ''}
+                          src={getYouTubeEmbedUrl(selectedLecture.video_url) || ''}
                           className="w-full h-full"
                           frameBorder="0"
                           allowFullScreen
@@ -89,7 +88,7 @@ const BatchDetailPage = () => {
                         />
                       ) : (
                         <video
-                          src={selectedLecture.videoUrl}
+                          src={selectedLecture.video_url}
                           controls
                           className="w-full h-full"
                           title={selectedLecture.title}
@@ -99,9 +98,9 @@ const BatchDetailPage = () => {
 
                     {/* Resources */}
                     <div className="flex flex-wrap gap-4">
-                      {selectedLecture.notesUrl && (
+                      {selectedLecture.notes_url && (
                         <a
-                          href={selectedLecture.notesUrl}
+                          href={selectedLecture.notes_url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
@@ -110,9 +109,9 @@ const BatchDetailPage = () => {
                           Download Notes
                         </a>
                       )}
-                      {selectedLecture.dppUrl && (
+                      {selectedLecture.dpp_url && (
                         <a
-                          href={selectedLecture.dppUrl}
+                          href={selectedLecture.dpp_url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
@@ -182,10 +181,10 @@ const BatchDetailPage = () => {
                                           <span className="font-medium">{lecture.title}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                          {lecture.notesUrl && (
+                                          {lecture.notes_url && (
                                             <FileText className="h-4 w-4 text-green-600" />
                                           )}
-                                          {lecture.dppUrl && (
+                                          {lecture.dpp_url && (
                                             <Download className="h-4 w-4 text-blue-600" />
                                           )}
                                         </div>
