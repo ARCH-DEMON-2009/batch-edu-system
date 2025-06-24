@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
@@ -77,6 +78,48 @@ export const useSupabaseAuth = () => {
   useEffect(() => {
     let mounted = true;
 
+    const initializeAuth = async () => {
+      try {
+        // Get initial session
+        const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          if (mounted) {
+            setSession(null);
+            setUser(null);
+            setLoading(false);
+          }
+          return;
+        }
+
+        console.log('Initial session check:', initialSession?.user?.email);
+        
+        if (mounted) {
+          setSession(initialSession);
+        }
+        
+        if (initialSession?.user) {
+          const userProfile = await loadUserProfile(initialSession.user);
+          if (mounted) {
+            setUser(userProfile);
+          }
+        }
+        
+        if (mounted) {
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        if (mounted) {
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+        }
+      }
+    };
+
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
@@ -96,29 +139,15 @@ export const useSupabaseAuth = () => {
           }
         }
         
+        // Always ensure loading is false after auth state change
         if (mounted) {
           setLoading(false);
         }
       }
     );
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!mounted) return;
-      
-      console.log('Initial session check:', session?.user?.email);
-      setSession(session);
-      
-      if (session?.user) {
-        const userProfile = await loadUserProfile(session.user);
-        if (mounted) {
-          setUser(userProfile);
-        }
-      }
-      
-      if (mounted) {
-        setLoading(false);
-      }
-    });
+    // Initialize auth
+    initializeAuth();
 
     return () => {
       mounted = false;
@@ -156,6 +185,7 @@ export const useSupabaseAuth = () => {
   const signOut = async () => {
     try {
       console.log('Signing out user:', user?.email);
+      setLoading(true);
       
       // Clear local state first
       setUser(null);
@@ -167,6 +197,7 @@ export const useSupabaseAuth = () => {
       if (error) {
         console.error('Sign out error:', error);
         toast.error('Error signing out');
+        setLoading(false);
         return;
       }
 
@@ -174,12 +205,14 @@ export const useSupabaseAuth = () => {
       localStorage.removeItem('sb-cvraqxexfduoylpofoec-auth-token');
       
       toast.success('Signed out successfully');
+      setLoading(false);
       
       // Redirect to login page
       window.location.href = '/admin';
     } catch (error) {
       console.error('Sign out error:', error);
       toast.error('Error signing out');
+      setLoading(false);
     }
   };
 
