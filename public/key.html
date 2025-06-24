@@ -1,0 +1,97 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Verification - Educational Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center">
+    <div class="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full mx-4">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Access Verification</h1>
+            <p class="text-gray-600">Choose your preferred method to access the platform</p>
+        </div>
+
+        <div class="space-y-4">
+            <!-- Server 1 Button -->
+            <button 
+                id="server1-btn"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300 transform hover:scale-105 shadow-lg"
+            >
+                🚀 Server 1 (Recommended)
+            </button>
+
+            <!-- Server 2 Button -->
+            <button 
+                id="server2-btn"
+                class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300 transform hover:scale-105 shadow-lg"
+            >
+                ⚡ Server 2 (Alternative)
+            </button>
+
+            <!-- Continue with Ads Button -->
+            <button 
+                id="ads-btn"
+                class="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300 transform hover:scale-105 shadow-lg"
+            >
+                📺 Continue with Ads
+            </button>
+        </div>
+
+        <div class="mt-8 text-center">
+            <p class="text-sm text-gray-500">
+                Choose Server 1 or 2 for ad-free experience, or continue with ads for free access
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Load monetization settings and set up buttons
+        async function loadSettings() {
+            try {
+                // In production, you would fetch this from your API
+                // For now, we'll use placeholder URLs that need to be configured
+                const settings = {
+                    server1_url: 'https://linkshortify.com/server1', // Replace with actual shortened URL
+                    server2_url: 'https://linkshortify.com/server2', // Replace with actual shortened URL
+                };
+
+                document.getElementById('server1-btn').addEventListener('click', () => {
+                    if (settings.server1_url && settings.server1_url !== 'https://linkshortify.com/server1') {
+                        window.location.href = settings.server1_url;
+                    } else {
+                        alert('Server 1 URL not configured. Please contact admin.');
+                    }
+                });
+
+                document.getElementById('server2-btn').addEventListener('click', () => {
+                    if (settings.server2_url && settings.server2_url !== 'https://linkshortify.com/server2') {
+                        window.location.href = settings.server2_url;
+                    } else {
+                        alert('Server 2 URL not configured. Please contact admin.');
+                    }
+                });
+
+                document.getElementById('ads-btn').addEventListener('click', () => {
+                    // Set ads cookie and redirect to main site
+                    document.cookie = "ads=true; max-age=3600; path=/";
+                    window.location.href = '/';
+                });
+            } catch (error) {
+                console.error('Error loading settings:', error);
+            }
+        }
+
+        // Load settings when page loads
+        loadSettings();
+    </script>
+</body>
+</html>

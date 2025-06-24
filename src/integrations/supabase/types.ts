@@ -200,6 +200,30 @@ export type Database = {
           },
         ]
       }
+      settings: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       subjects: {
         Row: {
           batch_id: string
@@ -234,6 +258,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      system_backups: {
+        Row: {
+          backup_data: Json
+          backup_date: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          backup_data: Json
+          backup_date?: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          backup_data?: Json
+          backup_date?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
       }
       user_profiles: {
         Row: {
@@ -270,9 +315,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_batch: {
+        Args: { batch_id: string }
+        Returns: boolean
+      }
       create_daily_backup: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      create_system_backup: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       restore_from_backup: {
         Args: { restore_date: string }

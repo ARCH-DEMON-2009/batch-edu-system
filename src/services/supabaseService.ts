@@ -8,6 +8,8 @@ type SubjectRow = Tables['subjects']['Row'];
 type ChapterRow = Tables['chapters']['Row'];
 type LectureRow = Tables['lectures']['Row'];
 type LiveClassRow = Tables['live_classes']['Row'];
+type UserProfileRow = Tables['user_profiles']['Row'];
+type SettingsRow = Tables['settings']['Row'];
 
 export interface SupabaseBatch extends BatchRow {
   subjects: SupabaseSubject[];
@@ -22,6 +24,56 @@ export interface SupabaseChapter extends ChapterRow {
 }
 
 export const supabaseService = {
+  // User Profile operations
+  async getUserProfiles(): Promise<UserProfileRow[]> {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async updateUserProfile(id: string, updates: Partial<UserProfileRow>) {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteUserProfile(id: string) {
+    const { error } = await supabase
+      .from('user_profiles')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  async createUserProfile(profile: {
+    email: string;
+    role: 'super_admin' | 'admin' | 'uploader';
+    assigned_batches?: string[];
+  }) {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .insert([{
+        ...profile,
+        assigned_batches: profile.assigned_batches || []
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
   // Batch operations
   async getBatches(): Promise<SupabaseBatch[]> {
     const { data, error } = await supabase
@@ -53,6 +105,18 @@ export const supabaseService = {
     return data;
   },
 
+  async updateBatch(id: string, updates: { name?: string; description?: string; assigned_uploaders?: string[] }) {
+    const { data, error } = await supabase
+      .from('batches')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
   async deleteBatch(id: string) {
     const { error } = await supabase
       .from('batches')
@@ -67,6 +131,18 @@ export const supabaseService = {
     const { data, error } = await supabase
       .from('subjects')
       .insert([{ ...subject, batch_id: batchId }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async updateSubject(id: string, updates: { name?: string; color?: string }) {
+    const { data, error } = await supabase
+      .from('subjects')
+      .update(updates)
+      .eq('id', id)
       .select()
       .single();
 
@@ -111,6 +187,18 @@ export const supabaseService = {
     return data;
   },
 
+  async updateChapter(id: string, updates: { title?: string; order_index?: number }) {
+    const { data, error } = await supabase
+      .from('chapters')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
   async deleteChapter(id: string) {
     const { error } = await supabase
       .from('chapters')
@@ -132,6 +220,18 @@ export const supabaseService = {
     const { data, error } = await supabase
       .from('lectures')
       .insert([{ ...lecture, chapter_id: chapterId }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async updateLecture(id: string, updates: Partial<LectureRow>) {
+    const { data, error } = await supabase
+      .from('lectures')
+      .update(updates)
+      .eq('id', id)
       .select()
       .single();
 
@@ -197,5 +297,45 @@ export const supabaseService = {
       .eq('id', id);
 
     if (error) throw error;
+  },
+
+  // Settings operations
+  async getSettings(key: string): Promise<SettingsRow | null> {
+    const { data, error } = await supabase
+      .from('settings')
+      .select('*')
+      .eq('key', key)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return data;
+  },
+
+  async updateSettings(key: string, value: any) {
+    const { data, error } = await supabase
+      .from('settings')
+      .upsert([{ key, value }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Backup operations
+  async createBackup() {
+    const { data, error } = await supabase.rpc('create_system_backup');
+    if (error) throw error;
+    return data;
+  },
+
+  async getBackups() {
+    const { data, error } = await supabase
+      .from('system_backups')
+      .select('*')
+      .order('backup_date', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
   }
 };
