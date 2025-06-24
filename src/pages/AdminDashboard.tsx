@@ -30,17 +30,40 @@ const AdminDashboard = () => {
   const [liveClasses, setLiveClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const handleLogout = () => {
-    logout();
+  // Debug user information
+  useEffect(() => {
+    console.log('AdminDashboard - Current user:', user);
+    console.log('AdminDashboard - User role:', user?.role);
+    console.log('AdminDashboard - User assigned batches:', user?.assignedBatches);
+  }, [user]);
+
+  const handleLogout = async () => {
+    console.log('Logout button clicked');
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to logout properly.",
+        variant: "destructive",
+      });
+    }
   };
 
   const loadData = async () => {
     try {
       setLoading(true);
+      console.log('Loading dashboard data...');
+      
       const [batchesData, liveClassesData] = await Promise.all([
         supabaseService.getBatches(),
         supabaseService.getLiveClasses()
       ]);
+      
+      console.log('Batches loaded:', batchesData.length);
+      console.log('Live classes loaded:', liveClassesData.length);
+      
       setBatches(batchesData);
       setLiveClasses(liveClassesData);
     } catch (error) {
@@ -56,8 +79,10 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (user) {
+      loadData();
+    }
+  }, [user]);
 
   // Calculate statistics
   const totalBatches = batches.length;
@@ -94,14 +119,21 @@ const AdminDashboard = () => {
                 <h1 className="text-xl font-bold text-gray-900">
                   {user?.role === 'uploader' ? 'Content Dashboard' : 'Admin Dashboard'}
                 </h1>
-                <p className="text-sm text-gray-500 capitalize">{user?.role?.replace('_', ' ')} Panel</p>
+                <p className="text-sm text-gray-500 capitalize">
+                  {user?.role?.replace('_', ' ')} Panel | {user?.email}
+                </p>
               </div>
             </div>
             
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
-                Welcome, {user?.email}
-              </span>
+              <div className="text-right">
+                <span className="text-sm text-gray-600 block">
+                  Welcome, {user?.email}
+                </span>
+                <span className="text-xs text-blue-600 capitalize font-medium">
+                  {user?.role?.replace('_', ' ')}
+                </span>
+              </div>
               <Button variant="outline" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout

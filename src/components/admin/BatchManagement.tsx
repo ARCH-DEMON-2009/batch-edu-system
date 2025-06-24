@@ -21,19 +21,39 @@ const BatchManagement = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  // Debug user permissions
+  useEffect(() => {
+    console.log('BatchManagement - Current user:', user);
+    console.log('BatchManagement - User role:', user?.role);
+    console.log('BatchManagement - Can create batch:', canCreateBatch());
+  }, [user]);
+
   const canManageBatch = (batchId: string) => {
-    if (user?.role === 'super_admin' || user?.role === 'admin') return true;
-    return user?.assignedBatches?.includes(batchId) || false;
+    console.log('Checking batch access for:', batchId, 'User role:', user?.role);
+    
+    if (user?.role === 'super_admin' || user?.role === 'admin') {
+      console.log('Access granted: Admin/Super admin');
+      return true;
+    }
+    
+    const hasAccess = user?.assignedBatches?.includes(batchId) || false;
+    console.log('Uploader access check:', hasAccess, 'Assigned batches:', user?.assignedBatches);
+    return hasAccess;
   };
 
   const canCreateBatch = () => {
-    return user?.role === 'super_admin' || user?.role === 'admin';
+    const canCreate = user?.role === 'super_admin' || user?.role === 'admin';
+    console.log('Can create batch:', canCreate, 'User role:', user?.role);
+    return canCreate;
   };
 
   const loadBatches = async () => {
     try {
       setLoading(true);
+      console.log('Loading batches...');
+      
       const data = await supabaseService.getBatches();
+      console.log('Batches loaded:', data.length);
       setBatches(data);
     } catch (error) {
       console.error('Error loading batches:', error);
@@ -48,8 +68,10 @@ const BatchManagement = () => {
   };
 
   useEffect(() => {
-    loadBatches();
-  }, []);
+    if (user) {
+      loadBatches();
+    }
+  }, [user]);
 
   const handleCreateBatch = async () => {
     if (!newBatch.name.trim()) {
@@ -62,6 +84,8 @@ const BatchManagement = () => {
     }
 
     try {
+      console.log('Creating batch:', newBatch);
+      
       await supabaseService.createBatch({
         name: newBatch.name,
         description: newBatch.description
@@ -74,7 +98,7 @@ const BatchManagement = () => {
 
       setNewBatch({ name: '', description: '' });
       setIsCreateDialogOpen(false);
-      loadBatches();
+      await loadBatches();
     } catch (error) {
       console.error('Error creating batch:', error);
       toast({
@@ -88,12 +112,14 @@ const BatchManagement = () => {
   const handleDeleteBatch = async (batchId: string, batchName: string) => {
     if (confirm(`Are you sure you want to delete "${batchName}"? This action cannot be undone.`)) {
       try {
+        console.log('Deleting batch:', batchId);
+        
         await supabaseService.deleteBatch(batchId);
         toast({
           title: "Batch Deleted",
           description: `${batchName} has been deleted successfully.`,
         });
-        loadBatches();
+        await loadBatches();
       } catch (error) {
         console.error('Error deleting batch:', error);
         toast({
@@ -119,6 +145,7 @@ const BatchManagement = () => {
   }
 
   const availableBatches = batches.filter(batch => canManageBatch(batch.id));
+  console.log('Available batches for user:', availableBatches.length, 'Total batches:', batches.length);
 
   if (loading) {
     return (
@@ -140,6 +167,9 @@ const BatchManagement = () => {
               ? 'Manage content for your assigned batches' 
               : 'Create and manage educational batches'
             }
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            User Role: {user?.role} | Can Create: {canCreateBatch() ? 'Yes' : 'No'}
           </p>
         </div>
         
@@ -259,6 +289,12 @@ const BatchManagement = () => {
               : "Create your first batch to get started."
             }
           </p>
+          <div className="mt-4 text-sm text-gray-400">
+            <p>Debug Info:</p>
+            <p>User Role: {user?.role}</p>
+            <p>Total Batches: {batches.length}</p>
+            <p>Available Batches: {availableBatches.length}</p>
+          </div>
         </div>
       )}
     </div>

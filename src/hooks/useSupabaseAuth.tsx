@@ -18,6 +18,8 @@ export const useSupabaseAuth = () => {
 
   const loadUserProfile = async (supabaseUser: SupabaseUser) => {
     try {
+      console.log('Loading user profile for:', supabaseUser.email);
+      
       const { data: profile, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -26,16 +28,42 @@ export const useSupabaseAuth = () => {
 
       if (error) {
         console.error('Error loading user profile:', error);
-        return null;
+        
+        // If user doesn't exist in profiles, create one with default role
+        if (error.code === 'PGRST116') {
+          console.log('Creating new user profile with default role');
+          const { data: newProfile, error: createError } = await supabase
+            .from('user_profiles')
+            .insert([{
+              email: supabaseUser.email,
+              user_id: supabaseUser.id,
+              role: 'uploader',
+              assigned_batches: []
+            }])
+            .select()
+            .single();
+
+          if (createError) {
+            console.error('Error creating user profile:', createError);
+            return null;
+          }
+
+          profile = newProfile;
+        } else {
+          return null;
+        }
       }
 
       if (profile) {
-        return {
+        const authUser = {
           id: profile.id,
           email: profile.email,
           role: profile.role as 'super_admin' | 'admin' | 'uploader',
           assignedBatches: profile.assigned_batches || []
         };
+        
+        console.log('User profile loaded:', authUser);
+        return authUser;
       }
 
       return null;
@@ -50,6 +78,8 @@ export const useSupabaseAuth = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
+        
         if (!mounted) return;
         
         setSession(session);
@@ -74,6 +104,7 @@ export const useSupabaseAuth = () => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!mounted) return;
       
+      console.log('Initial session check:', session?.user?.email);
       setSession(session);
       
       if (session?.user) {
@@ -104,11 +135,13 @@ export const useSupabaseAuth = () => {
       });
 
       if (error) {
+        console.error('Sign in error:', error);
         toast.error(error.message);
         setLoading(false);
         return false;
       }
 
+      console.log('Sign in successful for:', email);
       toast.success('Signed in successfully');
       return true;
     } catch (error) {
@@ -121,10 +154,28 @@ export const useSupabaseAuth = () => {
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      console.log('Signing out user:', user?.email);
+      
+      // Clear local state first
       setUser(null);
       setSession(null);
+      
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Sign out error:', error);
+        toast.error('Error signing out');
+        return;
+      }
+
+      // Clear any remaining local storage
+      localStorage.removeItem('sb-cvraqxexfduoylpofoec-auth-token');
+      
       toast.success('Signed out successfully');
+      
+      // Redirect to login page
+      window.location.href = '/admin';
     } catch (error) {
       console.error('Sign out error:', error);
       toast.error('Error signing out');
@@ -138,9 +189,13 @@ export const useSupabaseAuth = () => {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/admin/dashboard`
+        }
       });
 
       if (error) {
+        console.error('Sign up error:', error);
         toast.error(error.message);
         setLoading(false);
         return false;
