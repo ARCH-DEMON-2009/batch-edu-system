@@ -1,10 +1,11 @@
 
-import { Link } from 'react-router-dom';
-import { BookOpen, Users, Calendar, Play, FileText, Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { BookOpen, Play, FileText, Calendar, Users, Award, Target, Lightbulb } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
 import Navbar from '@/components/Navbar';
+import Hero from '@/components/Hero';
+import FeatureCard from '@/components/FeatureCard';
+import BatchCard from '@/components/BatchCard';
+import Footer from '@/components/Footer';
 
 const Index = () => {
   const { batches } = useData();
@@ -13,58 +14,60 @@ const Index = () => {
     {
       icon: BookOpen,
       title: 'Structured Learning',
-      description: 'Organized batches with subjects, chapters, and lectures for systematic learning'
+      description: 'Organized batches with subjects, chapters, and lectures for systematic learning',
+      gradient: 'from-blue-500 to-blue-600'
     },
     {
       icon: Play,
       title: 'Video Lectures',
-      description: 'High-quality video content from YouTube and direct streaming sources'
+      description: 'High-quality video content from YouTube and direct streaming sources',
+      gradient: 'from-red-500 to-red-600'
     },
     {
       icon: FileText,
       title: 'Study Materials',
-      description: 'Comprehensive notes and DPPs (Daily Practice Problems) for each lecture'
+      description: 'Comprehensive notes and DPPs (Daily Practice Problems) for each lecture',
+      gradient: 'from-green-500 to-green-600'
     },
     {
       icon: Calendar,
       title: 'Live Classes',
-      description: 'Interactive live sessions with expert instructors'
+      description: 'Interactive live sessions with expert instructors',
+      gradient: 'from-purple-500 to-purple-600'
+    },
+    {
+      icon: Users,
+      title: 'Expert Faculty',
+      description: 'Learn from experienced teachers and industry professionals',
+      gradient: 'from-orange-500 to-orange-600'
+    },
+    {
+      icon: Award,
+      title: 'Proven Results',
+      description: 'Track record of successful students achieving their goals',
+      gradient: 'from-yellow-500 to-yellow-600'
+    },
+    {
+      icon: Target,
+      title: 'Goal-Oriented',
+      description: 'Focused curriculum designed for competitive exam success',
+      gradient: 'from-pink-500 to-pink-600'
+    },
+    {
+      icon: Lightbulb,
+      title: 'Interactive Learning',
+      description: 'Engaging content with quizzes, assignments, and practice tests',
+      gradient: 'from-cyan-500 to-cyan-600'
     }
   ];
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              Master Your Studies with
-              <span className="block text-blue-200">EduPortal</span>
-            </h1>
-            <p className="text-xl md:text-2xl mb-8 text-blue-100 max-w-3xl mx-auto">
-              Comprehensive online learning platform with structured courses, expert lectures, and live classes
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/batches">
-                <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 px-8 py-3 text-lg">
-                  Explore Batches
-                </Button>
-              </Link>
-              <Link to="/live-classes">
-                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-blue-600 px-8 py-3 text-lg">
-                  Join Live Classes
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+      <Hero />
 
       {/* Features Section */}
-      <section className="py-20">
+      <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -76,30 +79,21 @@ const Index = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => {
-              const Icon = feature.icon;
-              return (
-                <Card key={index} className="text-center hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="mx-auto bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mb-4">
-                      <Icon className="h-8 w-8 text-blue-600" />
-                    </div>
-                    <CardTitle className="text-xl">{feature.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-base">
-                      {feature.description}
-                    </CardDescription>
-                  </CardContent>
-                </Card>
-              );
-            })}
+            {features.map((feature, index) => (
+              <FeatureCard
+                key={index}
+                icon={feature.icon}
+                title={feature.title}
+                description={feature.description}
+                gradient={feature.gradient}
+              />
+            ))}
           </div>
         </div>
       </section>
 
       {/* Available Batches Section */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -111,43 +105,8 @@ const Index = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {batches.map((batch) => (
-              <Card key={batch.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold text-blue-600">
-                    {batch.name}
-                  </CardTitle>
-                  <CardDescription>{batch.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Users className="h-4 w-4 mr-2" />
-                      {batch.subjects.length} Subjects
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {batch.subjects.slice(0, 3).map((subject) => (
-                        <span
-                          key={subject.id}
-                          className={`px-3 py-1 rounded-full text-xs font-medium text-white ${subject.color}`}
-                        >
-                          {subject.name}
-                        </span>
-                      ))}
-                      {batch.subjects.length > 3 && (
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-600">
-                          +{batch.subjects.length - 3} more
-                        </span>
-                      )}
-                    </div>
-                    <Link to={`/batch/${batch.id}`}>
-                      <Button className="w-full mt-4">
-                        View Batch Details
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
+            {batches.slice(0, 3).map((batch) => (
+              <BatchCard key={batch.id} batch={batch} />
             ))}
           </div>
 
@@ -161,22 +120,57 @@ const Index = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="bg-blue-600 text-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            Ready to Start Learning?
-          </h2>
-          <p className="text-xl mb-8 text-blue-100 max-w-2xl mx-auto">
-            Join thousands of students who are already mastering their subjects with our comprehensive courses
-          </p>
-          <Link to="/batches">
-            <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 px-8 py-3 text-lg">
-              Get Started Today
-            </Button>
-          </Link>
+      {/* Testimonials Section */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              What Our Students Say
+            </h2>
+            <p className="text-xl text-gray-600">
+              Success stories from our learning community
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                name: "Priya Sharma",
+                role: "JEE Aspirant",
+                content: "The structured approach and quality content helped me achieve my dream score!",
+                rating: 5
+              },
+              {
+                name: "Rahul Kumar",
+                role: "NEET Student",
+                content: "Live classes and doubt clearing sessions made all the difference in my preparation.",
+                rating: 5
+              },
+              {
+                name: "Anita Patel",
+                role: "CA Student",
+                content: "Excellent faculty and comprehensive study materials. Highly recommended!",
+                rating: 5
+              }
+            ].map((testimonial, index) => (
+              <div key={index} className="bg-gray-50 p-8 rounded-xl">
+                <div className="flex items-center mb-4">
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <div key={i} className="w-5 h-5 bg-yellow-400 rounded-full mr-1"></div>
+                  ))}
+                </div>
+                <p className="text-gray-700 mb-4 italic">"{testimonial.content}"</p>
+                <div>
+                  <div className="font-semibold text-gray-900">{testimonial.name}</div>
+                  <div className="text-sm text-gray-600">{testimonial.role}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
+
+      <Footer />
     </div>
   );
 };
