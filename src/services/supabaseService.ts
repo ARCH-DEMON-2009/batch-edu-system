@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 
@@ -24,6 +23,9 @@ export interface SupabaseChapter extends ChapterRow {
 }
 
 export const supabaseService = {
+  // Export supabase client for direct access
+  supabase,
+
   // User Profile operations
   async getUserProfiles(): Promise<UserProfileRow[]> {
     const { data, error } = await supabase
@@ -337,5 +339,13 @@ export const supabaseService = {
 
     if (error) throw error;
     return data || [];
+  },
+
+  async restoreFromBackup(date: string) {
+    const { data, error } = await supabase.rpc('restore_from_backup', {
+      restore_date: date
+    });
+    if (error) throw error;
+    return data;
   }
 };

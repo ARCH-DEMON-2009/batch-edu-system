@@ -257,18 +257,18 @@ const LiveClassManagement = () => {
               </div>
               <CardTitle className="text-lg">{liveClass.title}</CardTitle>
               <CardDescription>
-                {getBatchName(liveClass.batchId)} • {getSubjectName(liveClass.batchId, liveClass.subjectId)}
+                {getBatchName(liveClass.batch_id)} • {getSubjectName(liveClass.batch_id, liveClass.subject_id)}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <div className="flex items-center text-gray-600">
                   <Calendar className="h-4 w-4 mr-2" />
-                  <span className="text-sm">{formatDate(liveClass.scheduledAt)}</span>
+                  <span className="text-sm">{formatDate(new Date(liveClass.scheduled_at))}</span>
                 </div>
 
                 <div className="text-sm text-gray-600">
-                  <strong>Chapter:</strong> {getChapterName(liveClass.batchId, liveClass.subjectId, liveClass.chapterId)}
+                  <strong>Chapter:</strong> {getChapterName(liveClass.batch_id, liveClass.subject_id, liveClass.chapter_id)}
                 </div>
 
                 <div className="flex gap-2 pt-2">
@@ -303,7 +303,7 @@ const LiveClassManagement = () => {
 
                 {liveClass.status === 'live' && (
                   <a
-                    href={liveClass.liveUrl}
+                    href={liveClass.live_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block"

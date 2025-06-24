@@ -30,6 +30,8 @@ interface DataContextType {
   createLiveClass: (liveClass: any) => Promise<void>;
   updateLiveClass: (id: string, updates: any) => Promise<void>;
   deleteLiveClass: (id: string) => Promise<void>;
+  addLiveClass: (liveClass: any) => Promise<void>;
+  updateLiveClassStatus: (id: string, status: string) => Promise<void>;
 
   // Settings
   getSettings: (key: string) => Promise<any>;
@@ -38,6 +40,7 @@ interface DataContextType {
   // Backup
   createBackup: () => Promise<void>;
   getBackups: () => Promise<any[]>;
+  restoreFromBackup: (date: string) => Promise<void>;
 
   loading: boolean;
 }
@@ -171,7 +174,15 @@ export const DataProvider = ({ children }: DataProviderProps) => {
 
   const createLiveClass = async (liveClass: any) => {
     try {
-      const newLiveClass = await supabaseService.createLiveClass(liveClass);
+      const newLiveClass = await supabaseService.createLiveClass({
+        title: liveClass.title,
+        batch_id: liveClass.batchId,
+        subject_id: liveClass.subjectId,
+        chapter_id: liveClass.chapterId,
+        scheduled_at: liveClass.scheduledAt.toISOString(),
+        live_url: liveClass.liveUrl,
+        status: liveClass.status || 'scheduled'
+      });
       setLiveClasses(prev => [newLiveClass, ...prev]);
       toast.success('Live class created successfully');
     } catch (error) {
@@ -179,6 +190,8 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       toast.error('Failed to create live class');
     }
   };
+
+  const addLiveClass = createLiveClass; // Alias for compatibility
 
   const updateLiveClass = async (id: string, updates: any) => {
     try {
@@ -191,6 +204,10 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       console.error('Error updating live class:', error);
       toast.error('Failed to update live class');
     }
+  };
+
+  const updateLiveClassStatus = async (id: string, status: string) => {
+    await updateLiveClass(id, { status });
   };
 
   const deleteLiveClass = async (id: string) => {
@@ -246,6 +263,31 @@ export const DataProvider = ({ children }: DataProviderProps) => {
     }
   };
 
+  const restoreFromBackup = async (date: string) => {
+    try {
+      // Call the Supabase function to restore from backup
+      const { data, error } = await supabaseService.supabase.rpc('restore_from_backup', {
+        restore_date: date
+      });
+      
+      if (error) throw error;
+      
+      toast.success('Data restored successfully from backup');
+      
+      // Reload all data after restore
+      if (user) {
+        await loadBatches();
+        if (user.role === 'super_admin') {
+          await loadUsers();
+        }
+        await loadLiveClasses();
+      }
+    } catch (error) {
+      console.error('Error restoring from backup:', error);
+      toast.error('Failed to restore from backup');
+    }
+  };
+
   // Load initial data when user is authenticated
   useEffect(() => {
     if (user) {
@@ -273,10 +315,13 @@ export const DataProvider = ({ children }: DataProviderProps) => {
     createLiveClass,
     updateLiveClass,
     deleteLiveClass,
+    addLiveClass,
+    updateLiveClassStatus,
     getSettings,
     updateSettings,
     createBackup,
     getBackups,
+    restoreFromBackup,
     loading
   };
 
