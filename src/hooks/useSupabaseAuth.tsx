@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
@@ -26,6 +25,8 @@ export const useSupabaseAuth = () => {
         .eq('email', supabaseUser.email)
         .single();
 
+      let userProfile = profile;
+
       if (error) {
         console.error('Error loading user profile:', error);
         
@@ -48,18 +49,18 @@ export const useSupabaseAuth = () => {
             return null;
           }
 
-          profile = newProfile;
+          userProfile = newProfile;
         } else {
           return null;
         }
       }
 
-      if (profile) {
+      if (userProfile) {
         const authUser = {
-          id: profile.id,
-          email: profile.email,
-          role: profile.role as 'super_admin' | 'admin' | 'uploader',
-          assignedBatches: profile.assigned_batches || []
+          id: userProfile.id,
+          email: userProfile.email,
+          role: userProfile.role as 'super_admin' | 'admin' | 'uploader',
+          assignedBatches: userProfile.assigned_batches || []
         };
         
         console.log('User profile loaded:', authUser);
